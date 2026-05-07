@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useTransition } from 'react';
+import Markdown from 'react-markdown';
 import { useRouter } from 'next/navigation';
 import type { ChatMessage, Term, ConceptRefinement } from '@/lib/db';
 import {
@@ -594,10 +595,8 @@ export function TermDetailPage({ term, initialRefinements, initialChats, explain
                         <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
                           Additional Notes
                         </p>
-                        <div className="rounded-lg bg-zinc-50 dark:bg-zinc-900 px-4 py-3">
-                          <p className="text-sm text-zinc-700 dark:text-zinc-300 leading-6 whitespace-pre-wrap">
-                            {viewing.refinement_additional_note}
-                          </p>
+                        <div className="rounded-lg bg-zinc-50 dark:bg-zinc-900 px-4 py-3 prose prose-sm dark:prose-invert max-w-none text-zinc-700 dark:text-zinc-300">
+                          <Markdown>{viewing.refinement_additional_note ?? ''}</Markdown>
                         </div>
                       </div>
 
