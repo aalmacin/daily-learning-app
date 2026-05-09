@@ -7,23 +7,36 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
 }
 
+declare global {
+  interface Window {
+    __pwaInstallPrompt: BeforeInstallPromptEvent | null
+  }
+}
+
 export function usePWAInstall() {
   const [promptEvent, setPromptEvent] = useState<BeforeInstallPromptEvent | null>(null)
 
   useEffect(() => {
-    const handler = (e: Event) => {
-      e.preventDefault()
-      setPromptEvent(e as BeforeInstallPromptEvent)
+    // Pick up the event if it already fired before React mounted
+    if (window.__pwaInstallPrompt) {
+      setPromptEvent(window.__pwaInstallPrompt)
     }
-    window.addEventListener('beforeinstallprompt', handler)
-    return () => window.removeEventListener('beforeinstallprompt', handler)
+
+    const onReady = () => {
+      if (window.__pwaInstallPrompt) setPromptEvent(window.__pwaInstallPrompt)
+    }
+    window.addEventListener('pwaInstallPromptReady', onReady)
+    return () => window.removeEventListener('pwaInstallPromptReady', onReady)
   }, [])
 
   const install = async () => {
     if (!promptEvent) return
     await promptEvent.prompt()
     const { outcome } = await promptEvent.userChoice
-    if (outcome === 'accepted') setPromptEvent(null)
+    if (outcome === 'accepted') {
+      setPromptEvent(null)
+      window.__pwaInstallPrompt = null
+    }
   }
 
   return { canInstall: !!promptEvent, install }
