@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
 import { InstallButton } from "@/components/InstallButton";
 import { Providers } from "@/components/Providers";
+import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration";
 import { signOut } from "@/actions/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import "./globals.css";
@@ -81,6 +82,7 @@ export default async function RootLayout({
           </div>
         </header>
         <Providers>{children}</Providers>
+        <ServiceWorkerRegistration />
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -90,9 +92,6 @@ export default async function RootLayout({
                 window.__pwaInstallPrompt = e;
                 window.dispatchEvent(new Event('pwaInstallPromptReady'));
               });
-              if ('serviceWorker' in navigator) {
-                window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js'));
-              }
             `,
           }}
         />
