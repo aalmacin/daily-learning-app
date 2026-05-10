@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
-import { InstallButton } from "@/components/InstallButton";
 import { Providers } from "@/components/Providers";
 import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration";
 import { signOut } from "@/actions/auth";
@@ -56,7 +55,6 @@ export default async function RootLayout({
               NoteMaker
             </Link>
             <nav className="flex items-center gap-4">
-              <InstallButton />
               {user && (
                 <>
                   <Link href="/terms" className="text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50 transition-colors">
@@ -83,18 +81,6 @@ export default async function RootLayout({
         </header>
         <Providers>{children}</Providers>
         <ServiceWorkerRegistration />
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              window.__pwaInstallPrompt = null;
-              window.addEventListener('beforeinstallprompt', function(e) {
-                e.preventDefault();
-                window.__pwaInstallPrompt = e;
-                window.dispatchEvent(new Event('pwaInstallPromptReady'));
-              });
-            `,
-          }}
-        />
       </body>
     </html>
   );
