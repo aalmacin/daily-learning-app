@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
 import { Providers } from "@/components/Providers";
@@ -31,6 +31,10 @@ export const metadata: Metadata = {
   },
 };
 
+export const viewport: Viewport = {
+  themeColor: '#0e7490',
+};
+
 export default async function RootLayout({
   children,
 }: Readonly<{
@@ -44,10 +48,6 @@ export default async function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <head>
-        <meta name="theme-color" content="#0e7490" />
-        <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
-      </head>
       <body className="min-h-full flex flex-col">
         <header className="border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
           <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
