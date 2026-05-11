@@ -1,41 +1,67 @@
 import Link from 'next/link';
-import { getAllTerms, getAllCategories, getUserSettings } from '@/lib/db';
-import { getCurrentUser } from '@/lib/auth';
+import { getTermsPaginated, getAllCategories } from '@/lib/db';
 import { TermsTable } from '@/components/TermsTable';
+import type { TermsQuery } from '@/lib/db';
+
+const PAGE_SIZE = 25;
 
 export default async function TermsPage({
   searchParams,
 }: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  const { category } = await searchParams;
-  const user = await getCurrentUser();
-  const [terms, categories, settings] = await Promise.all([
-    getAllTerms(),
+  const params = await searchParams;
+
+  const page = Math.max(1, Number(params.page) || 1);
+  const q = typeof params.q === 'string' ? params.q : '';
+  const rawCategory = params.category;
+  const categoryNames =
+    typeof rawCategory === 'string'
+      ? [rawCategory]
+      : Array.isArray(rawCategory)
+        ? rawCategory
+        : [];
+  const notion: TermsQuery['notion'] =
+    params.notion === 'added' || params.notion === 'all' ? params.notion : 'pending';
+  const sort: TermsQuery['sort'] =
+    params.sort === 'name' || params.sort === 'priority' ? params.sort : 'created_at';
+  const dir: TermsQuery['dir'] = params.dir === 'asc' ? 'asc' : 'desc';
+
+  const [{ terms, total }, categories] = await Promise.all([
+    getTermsPaginated({ page, pageSize: PAGE_SIZE, q, categoryNames, notion, sort, dir }),
     getAllCategories(),
-    user ? getUserSettings(user.id) : null,
   ]);
-  const initialCategory = typeof category === 'string' ? category : undefined;
-  const notionConfigured = !!(settings?.notion_api_key && settings?.notion_database_id);
 
   return (
     <div className="bg-zinc-50 dark:bg-black p-4 md:p-8">
       <div className="max-w-6xl mx-auto">
-        {!notionConfigured && (
-          <div className="mb-6 rounded-md border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950 px-4 py-3 flex items-center justify-between gap-4">
-            <p className="text-sm text-amber-800 dark:text-amber-300">
-              Notion is not configured. Set up your API key and database ID to export terms.
-            </p>
-            <Link
-              href="/settings"
-              className="shrink-0 text-sm font-medium text-amber-900 dark:text-amber-200 underline underline-offset-2 hover:no-underline"
-            >
-              Go to Settings
-            </Link>
-          </div>
-        )}
-        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50 mb-6">Terms</h1>
-        <TermsTable initialData={terms} initialCategories={categories} initialCategory={initialCategory} timezone={settings?.timezone ?? 'UTC'} />
+        <div className="mb-6 flex items-center gap-4">
+          <Link
+            href="/"
+            className="text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+          >
+            ← Home
+          </Link>
+          <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">Terms</h1>
+          <Link
+            href="/categories"
+            className="ml-auto text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+          >
+            Manage Categories
+          </Link>
+        </div>
+        <TermsTable
+          initialTerms={terms}
+          total={total}
+          allCategories={categories}
+          currentPage={page}
+          pageSize={PAGE_SIZE}
+          currentQ={q}
+          currentCategories={categoryNames}
+          currentNotion={notion}
+          currentSort={sort}
+          currentDir={dir}
+        />
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useMemo, useState, useEffect, useRef } from 'react';
 
 declare module '@tanstack/react-table' {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -9,40 +9,24 @@ declare module '@tanstack/react-table' {
   }
 }
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   useReactTable,
   getCoreRowModel,
-  getSortedRowModel,
-  getFilteredRowModel,
   getExpandedRowModel,
-  getPaginationRowModel,
   createColumnHelper,
   flexRender,
-  type SortingState,
-  type ColumnFiltersState,
-  type FilterFn,
   type ExpandedState,
-  type PaginationState,
 } from '@tanstack/react-table';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { queryKeys } from '@/lib/queryKeys';
-import { deleteTerm, fetchAllTerms, updateTermPriority } from '@/actions/terms';
-import { addToNotion, syncWithNotion } from '@/actions/notion';
+import { useMutation } from '@tanstack/react-query';
+import { deleteTerm, updateTermPriority } from '@/actions/terms';
+import { addToNotion } from '@/actions/notion';
 import { updateTermCategories } from '@/actions/categories';
 import type { Term, Category, Priority } from '@/lib/db';
 
 const PRIORITIES: Priority[] = ['High', 'Medium', 'Low'];
 
 const columnHelper = createColumnHelper<Term>();
-
-const globalFilterFn: FilterFn<Term> = (row, _columnId, filterValue: string) => {
-  const search = filterValue.toLowerCase();
-  const name = row.original.name.toLowerCase();
-  const categories = row.original.categories.join(' ').toLowerCase();
-  return name.includes(search) || categories.includes(search);
-};
-
-const PAGE_SIZE_OPTIONS = [10, 25, 50];
 
 function CategoryEditor({ term, allCategories, onSaved }: {
   term: Term;
@@ -124,141 +108,113 @@ function PriorityEditor({ term, onSaved }: { term: Term; onSaved: (updated: Term
   );
 }
 
-function CategoryFilterDropdown({ categories, selected, onChange }: {
-  categories: string[];
-  selected: string[];
-  onChange: (cats: string[]) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState('');
-  const ref = useRef<HTMLDivElement>(null);
+type TermsTableProps = {
+  initialTerms: Term[];
+  total: number;
+  allCategories: Category[];
+  currentPage: number;
+  pageSize: number;
+  currentQ: string;
+  currentCategories: string[];
+  currentNotion: 'pending' | 'added' | 'all';
+  currentSort: 'created_at' | 'name' | 'priority';
+  currentDir: 'asc' | 'desc';
+};
 
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
-
-  const filtered = categories.filter((c) => c.toLowerCase().includes(search.toLowerCase()));
-
-  const toggle = (cat: string) =>
-    onChange(selected.includes(cat) ? selected.filter((c) => c !== cat) : [...selected, cat]);
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-2 px-3 py-2 text-xs font-medium rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
-      >
-        {selected.length > 0 ? `${selected.length} categor${selected.length === 1 ? 'y' : 'ies'}` : 'Filter by category'}
-        <span className="text-zinc-400">▾</span>
-      </button>
-      {open && (
-        <div className="absolute z-10 mt-1 w-56 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-lg">
-          <div className="p-2 border-b border-zinc-100 dark:border-zinc-800">
-            <input
-              type="text"
-              placeholder="Search categories…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full px-2 py-1.5 text-xs rounded border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:focus:ring-zinc-600"
-              autoFocus
-            />
-          </div>
-          <ul className="max-h-48 overflow-y-auto py-1">
-            {filtered.length === 0 ? (
-              <li className="px-3 py-2 text-xs text-zinc-400">No categories found</li>
-            ) : (
-              filtered.map((cat) => (
-                <li key={cat}>
-                  <label className="flex items-center gap-2 px-3 py-1.5 text-xs text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={selected.includes(cat)}
-                      onChange={() => toggle(cat)}
-                      className="accent-zinc-900 dark:accent-zinc-50"
-                    />
-                    {cat}
-                  </label>
-                </li>
-              ))
-            )}
-          </ul>
-          {selected.length > 0 && (
-            <div className="p-2 border-t border-zinc-100 dark:border-zinc-800">
-              <button
-                type="button"
-                onClick={() => onChange([])}
-                className="text-xs text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
-              >
-                Clear all
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-export function TermsTable({ initialData, initialCategories, initialCategory, timezone = 'UTC' }: { initialData: Term[]; initialCategories: Category[]; initialCategory?: string; timezone?: string }) {
-  const queryClient = useQueryClient();
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const [globalFilter, setGlobalFilter] = useState('');
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-  const [selectedCategories, setSelectedCategories] = useState<string[]>(initialCategory ? [initialCategory] : []);
+export function TermsTable({
+  initialTerms,
+  total,
+  allCategories,
+  currentPage,
+  pageSize,
+  currentQ,
+  currentCategories,
+  currentNotion,
+  currentSort,
+  currentDir,
+}: TermsTableProps) {
+  const router = useRouter();
+  const [terms, setTerms] = useState<Term[]>(initialTerms);
   const [expanded, setExpanded] = useState<ExpandedState>({});
-  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
+  const [searchInput, setSearchInput] = useState(currentQ);
   const [notionSuccessId, setNotionSuccessId] = useState<number | null>(null);
-  const [notionFilter, setNotionFilter] = useState<'all' | 'pending' | 'added'>('all');
-  const [priorityFilter, setPriorityFilter] = useState<'all' | Priority>('all');
-  const [dailyLearningFilter, setDailyLearningFilter] = useState<'all' | 'done' | 'not-done'>('all');
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<number | null>(null);
   const [deleteSuccess, setDeleteSuccess] = useState(false);
-  const [syncMessage, setSyncMessage] = useState<string | null>(null);
-  const [staleTerms, setStaleTerms] = useState<string[]>([]);
-  const [syncDbError, setSyncDbError] = useState<string | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const { data = initialData } = useQuery({
-    queryKey: queryKeys.terms.all(),
-    queryFn: fetchAllTerms,
-    initialData,
-    staleTime: 0,
-  });
+  // Sync server data when URL-driven props change (Next.js preserves client state across navigations)
+  useEffect(() => {
+    setTerms(initialTerms);
+    setExpanded({});
+    setSearchInput(currentQ);
+  }, [initialTerms, currentQ]);
 
-  const { data: allCategories = initialCategories } = useQuery({
-    queryKey: queryKeys.categories.all(),
-    queryFn: async () => initialCategories,
-    initialData: initialCategories,
-  });
+  // Cleanup pending debounce timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
 
-  const filterCategoryNames = useMemo(() => {
-    const set = new Set<string>();
-    data.forEach((term) => term.categories.forEach((c) => set.add(c)));
-    return Array.from(set).sort();
-  }, [data]);
+  const pageCount = Math.ceil(total / pageSize);
 
-  const filteredData = useMemo(() => {
-    return data.filter((term) => {
-      if (notionFilter === 'pending' && term.notion_page_id !== null) return false;
-      if (notionFilter === 'added' && term.notion_page_id === null) return false;
-      if (selectedCategories.length > 0 && !selectedCategories.every((cat) => term.categories.includes(cat))) return false;
-      if (priorityFilter !== 'all' && term.priority !== priorityFilter) return false;
-      if (dailyLearningFilter === 'done' && !term.daily_learning_done) return false;
-      if (dailyLearningFilter === 'not-done' && term.daily_learning_done) return false;
-      return true;
-    });
-  }, [data, selectedCategories, notionFilter, priorityFilter, dailyLearningFilter]);
+  function buildUrl(overrides: Partial<{
+    q: string;
+    categories: string[];
+    notion: 'pending' | 'added' | 'all';
+    sort: 'created_at' | 'name' | 'priority';
+    dir: 'asc' | 'desc';
+    page: number;
+  }>): string {
+    const merged = {
+      q: searchInput,
+      categories: currentCategories,
+      notion: currentNotion,
+      sort: currentSort,
+      dir: currentDir,
+      page: currentPage,
+      ...overrides,
+    };
+    const params = new URLSearchParams();
+    if (merged.q) params.set('q', merged.q);
+    merged.categories.forEach((c) => params.append('category', c));
+    if (merged.notion !== 'pending') params.set('notion', merged.notion);
+    if (merged.sort !== 'created_at') params.set('sort', merged.sort);
+    if (merged.dir !== 'desc') params.set('dir', merged.dir);
+    if (merged.page !== 1) params.set('page', String(merged.page));
+    const qs = params.toString();
+    return qs ? `/terms?${qs}` : '/terms';
+  }
+
+  function navigate(overrides: Parameters<typeof buildUrl>[0]) {
+    router.replace(buildUrl(overrides), { scroll: false });
+  }
+
+  function handleSearchChange(value: string) {
+    setSearchInput(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      navigate({ q: value, page: 1 });
+    }, 300);
+  }
+
+  function toggleCategory(cat: string) {
+    const next = currentCategories.includes(cat)
+      ? currentCategories.filter((c) => c !== cat)
+      : [...currentCategories, cat];
+    navigate({ categories: next, page: 1 });
+  }
+
+  function handleSort(column: 'created_at' | 'name' | 'priority') {
+    const newDir =
+      currentSort === column && currentDir === 'desc' ? 'asc' : 'desc';
+    navigate({ sort: column, dir: newDir, page: 1 });
+  }
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => deleteTerm(id),
     onSuccess: (_, id) => {
-      queryClient.setQueryData<Term[]>(queryKeys.terms.all(), (prev = []) =>
-        prev.filter((t) => t.id !== id)
-      );
+      setTerms((prev) => prev.filter((t) => t.id !== id));
       setDeleteSuccess(true);
       setTimeout(() => setDeleteSuccess(false), 3000);
     },
@@ -266,31 +222,33 @@ export function TermsTable({ initialData, initialCategories, initialCategory, ti
 
   const addToNotionMutation = useMutation({
     mutationFn: (term: Term) =>
-      addToNotion(term.id, { name: term.name, content: term.content, categories: term.categories, priority: term.priority }),
+      addToNotion(term.id, {
+        name: term.name,
+        content: term.content,
+        categories: term.categories,
+        priority: term.priority,
+      }),
     onSuccess: (updatedTerm, term) => {
-      queryClient.setQueryData<Term[]>(queryKeys.terms.all(), (prev = []) =>
-        prev.map((t) => (t.id === term.id ? updatedTerm : t))
-      );
+      setTerms((prev) => prev.map((t) => (t.id === term.id ? updatedTerm : t)));
       setNotionSuccessId(term.id);
       setTimeout(() => setNotionSuccessId(null), 3000);
     },
   });
 
-  const syncMutation = useMutation({
-    mutationFn: syncWithNotion,
-    onSuccess: ({ synced, imported, pushed, contentSynced, skipped, stale, dbError }) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.terms.all() });
-      const parts = [`Synced ${synced} term${synced !== 1 ? 's' : ''} with Notion.`];
-      if (pushed > 0) parts.push(`Pushed ${pushed} new term${pushed !== 1 ? 's' : ''} to Notion.`);
-      if (imported > 0) parts.push(`Imported ${imported} new term${imported !== 1 ? 's' : ''} from Notion.`);
-      if (contentSynced > 0) parts.push(`Downloaded ${contentSynced} explained concept${contentSynced !== 1 ? 's' : ''}.`);
-      if (skipped > 0) parts.push(`Skipped ${skipped} unchanged.`);
-      setSyncMessage(parts.join(' '));
-      setStaleTerms(stale);
-      setSyncDbError(dbError ?? null);
-      setTimeout(() => setSyncMessage(null), 4000);
-    },
-  });
+  const sortableHeader = (
+    label: string,
+    column: 'created_at' | 'name' | 'priority',
+  ) => (
+    <button
+      onClick={() => handleSort(column)}
+      className="flex items-center gap-1 hover:text-zinc-900 dark:hover:text-zinc-50 transition-colors"
+    >
+      {label}
+      <span className="text-zinc-300 dark:text-zinc-600">
+        {currentSort === column ? (currentDir === 'asc' ? '↑' : '↓') : '↕'}
+      </span>
+    </button>
+  );
 
   const columns = useMemo(
     () => [
@@ -308,8 +266,8 @@ export function TermsTable({ initialData, initialCategories, initialCategory, ti
         ),
       }),
       columnHelper.accessor('name', {
-        header: 'Name',
-        enableSorting: true,
+        header: () => sortableHeader('Name', 'name'),
+        enableSorting: false,
         cell: (info) => (
           <span className="font-medium text-zinc-900 dark:text-zinc-50">{info.getValue()}</span>
         ),
@@ -345,20 +303,19 @@ export function TermsTable({ initialData, initialCategories, initialCategory, ti
       }),
       columnHelper.accessor('created_at', {
         meta: { mobileHidden: true },
-        header: 'Created',
-        enableSorting: true,
+        header: () => sortableHeader('Created', 'created_at'),
+        enableSorting: false,
         cell: (info) =>
           new Date(info.getValue()).toLocaleDateString('en-US', {
             year: 'numeric',
             month: 'short',
             day: 'numeric',
-            timeZone: timezone,
           }),
       }),
       columnHelper.accessor('priority', {
-        header: 'Priority',
-        enableSorting: true,
         meta: { mobileHidden: true },
+        header: () => sortableHeader('Priority', 'priority'),
+        enableSorting: false,
         cell: (info) => {
           const val = info.getValue();
           const color =
@@ -372,7 +329,7 @@ export function TermsTable({ initialData, initialCategories, initialCategory, ti
       }),
       columnHelper.accessor('explained', {
         header: 'Explained',
-        enableSorting: true,
+        enableSorting: false,
         meta: { mobileHidden: true },
         cell: (info) => (
           <span className={info.getValue() ? 'text-green-600' : 'text-zinc-400'}>
@@ -446,78 +403,39 @@ export function TermsTable({ initialData, initialCategories, initialCategory, ti
         },
       }),
     ],
-    [deleteMutation, addToNotionMutation, notionSuccessId, confirmingDeleteId, setConfirmingDeleteId, timezone]
+    [deleteMutation, addToNotionMutation, notionSuccessId, confirmingDeleteId, currentSort, currentDir],
   );
 
   const table = useReactTable({
-    data: filteredData,
+    data: terms,
     columns,
-    state: { sorting, globalFilter, columnFilters, expanded, pagination },
-    onSortingChange: setSorting,
-    onGlobalFilterChange: (val) => {
-      setPagination((p) => ({ ...p, pageIndex: 0 }));
-      setGlobalFilter(val);
-    },
-    onColumnFiltersChange: setColumnFilters,
+    state: { expanded },
     onExpandedChange: setExpanded,
-    onPaginationChange: setPagination,
-    globalFilterFn,
     getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
     getExpandedRowModel: getExpandedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     getRowCanExpand: () => true,
   });
-
-  const { pageIndex, pageSize } = table.getState().pagination;
-  const pageCount = table.getPageCount();
-  const totalFiltered = table.getFilteredRowModel().rows.length;
 
   return (
     <div className="space-y-4">
       {deleteSuccess && (
         <p className="text-sm text-green-600 dark:text-green-400">Term deleted successfully.</p>
       )}
-      {syncMessage && (
-        <p className="text-sm text-green-600 dark:text-green-400">{syncMessage}</p>
-      )}
-      {staleTerms.length > 0 && (
-        <div className="text-sm text-yellow-600 dark:text-yellow-400">
-          <p className="font-medium">Unlinked {staleTerms.length} stale Notion page{staleTerms.length !== 1 ? 's' : ''}:</p>
-          <ul className="list-disc list-inside mt-1">
-            {staleTerms.map((name) => <li key={name}>{name}</li>)}
-          </ul>
-        </div>
-      )}
-      {syncDbError && (
-        <p className="text-sm text-yellow-600 dark:text-yellow-400">Could not query Notion database: {syncDbError}</p>
-      )}
-      {syncMutation.isError && (
-        <p className="text-sm text-red-600 dark:text-red-400">Sync failed. Please try again.</p>
-      )}
       <div className="flex flex-wrap gap-2 md:gap-4 items-start">
         <input
           type="text"
           placeholder="Search terms…"
-          value={globalFilter}
-          onChange={(e) => setGlobalFilter(e.target.value)}
+          value={searchInput}
+          onChange={(e) => handleSearchChange(e.target.value)}
           className="w-full md:flex-1 md:min-w-[200px] px-3 py-2 text-sm border border-zinc-200 rounded-lg bg-white dark:bg-zinc-900 dark:border-zinc-700 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:focus:ring-zinc-600"
         />
-        <button
-          onClick={() => syncMutation.mutate()}
-          disabled={syncMutation.isPending}
-          className="px-3 py-2 text-xs font-medium rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          {syncMutation.isPending ? 'Syncing…' : 'Sync with Notion'}
-        </button>
         <div className="flex items-center gap-1 border border-zinc-200 dark:border-zinc-700 rounded-lg overflow-hidden">
           {(['all', 'pending', 'added'] as const).map((val) => (
             <button
               key={val}
-              onClick={() => { setNotionFilter(val); setPagination((p) => ({ ...p, pageIndex: 0 })); }}
+              onClick={() => navigate({ notion: val, page: 1 })}
               className={`px-3 py-2 text-xs font-medium transition-colors ${
-                notionFilter === val
+                currentNotion === val
                   ? 'bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900'
                   : 'bg-white dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800'
               }`}
@@ -526,45 +444,31 @@ export function TermsTable({ initialData, initialCategories, initialCategory, ti
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-1 border border-zinc-200 dark:border-zinc-700 rounded-lg overflow-hidden">
-          {(['all', ...PRIORITIES] as const).map((val) => (
-            <button
-              key={val}
-              onClick={() => { setPriorityFilter(val); setPagination((p) => ({ ...p, pageIndex: 0 })); }}
-              className={`px-3 py-2 text-xs font-medium transition-colors ${
-                priorityFilter === val
-                  ? 'bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900'
-                  : 'bg-white dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800'
-              }`}
-            >
-              {val === 'all' ? 'All priorities' : val}
-            </button>
-          ))}
-        </div>
-        <div className="flex items-center gap-1 border border-zinc-200 dark:border-zinc-700 rounded-lg overflow-hidden">
-          {(['all', 'done', 'not-done'] as const).map((val) => (
-            <button
-              key={val}
-              onClick={() => { setDailyLearningFilter(val); setPagination((p) => ({ ...p, pageIndex: 0 })); }}
-              className={`px-3 py-2 text-xs font-medium transition-colors ${
-                dailyLearningFilter === val
-                  ? 'bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900'
-                  : 'bg-white dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800'
-              }`}
-            >
-              {val === 'done' ? 'Learning done' : val === 'not-done' ? 'Learning pending' : 'All learning'}
-            </button>
-          ))}
-        </div>
-        {filterCategoryNames.length > 0 && (
-          <CategoryFilterDropdown
-            categories={filterCategoryNames}
-            selected={selectedCategories}
-            onChange={(cats) => {
-              setSelectedCategories(cats);
-              setPagination((p) => ({ ...p, pageIndex: 0 }));
-            }}
-          />
+        {allCategories.length > 0 && (
+          <div className="flex flex-wrap gap-2 items-center">
+            <span className="text-xs text-zinc-500 dark:text-zinc-400">Filter by category:</span>
+            {allCategories.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => toggleCategory(cat.name)}
+                className={`px-2 py-1 text-xs rounded-full border transition-colors ${
+                  currentCategories.includes(cat.name)
+                    ? 'bg-zinc-900 text-white border-zinc-900 dark:bg-zinc-50 dark:text-zinc-900 dark:border-zinc-50'
+                    : 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-400 dark:bg-zinc-900 dark:text-zinc-400 dark:border-zinc-700 dark:hover:border-zinc-500'
+                }`}
+              >
+                {cat.name}
+              </button>
+            ))}
+            {currentCategories.length > 0 && (
+              <button
+                onClick={() => navigate({ categories: [], page: 1 })}
+                className="text-xs text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
+              >
+                Clear
+              </button>
+            )}
+          </div>
         )}
       </div>
 
@@ -578,23 +482,7 @@ export function TermsTable({ initialData, initialCategories, initialCategory, ti
                     key={header.id}
                     className={`px-2 py-2 md:px-4 md:py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider${header.column.columnDef.meta?.mobileHidden ? ' hidden md:table-cell' : ''}`}
                   >
-                    {header.column.getCanSort() ? (
-                      <button
-                        onClick={header.column.getToggleSortingHandler()}
-                        className="flex items-center gap-1 hover:text-zinc-900 dark:hover:text-zinc-50 transition-colors"
-                      >
-                        {flexRender(header.column.columnDef.header, header.getContext())}
-                        <span className="text-zinc-300 dark:text-zinc-600">
-                          {header.column.getIsSorted() === 'asc'
-                            ? '↑'
-                            : header.column.getIsSorted() === 'desc'
-                              ? '↓'
-                              : '↕'}
-                        </span>
-                      </button>
-                    ) : (
-                      flexRender(header.column.columnDef.header, header.getContext())
-                    )}
+                    {flexRender(header.column.columnDef.header, header.getContext())}
                   </th>
                 ))}
               </tr>
@@ -641,17 +529,13 @@ export function TermsTable({ initialData, initialCategories, initialCategory, ti
                           term={row.original}
                           allCategories={allCategories}
                           onSaved={(updated) =>
-                            queryClient.setQueryData<Term[]>(queryKeys.terms.all(), (prev = []) =>
-                              prev.map((t) => (t.id === updated.id ? updated : t))
-                            )
+                            setTerms((prev) => prev.map((t) => (t.id === updated.id ? updated : t)))
                           }
                         />
                         <PriorityEditor
                           term={row.original}
                           onSaved={(updated) =>
-                            queryClient.setQueryData<Term[]>(queryKeys.terms.all(), (prev = []) =>
-                              prev.map((t) => (t.id === updated.id ? updated : t))
-                            )
+                            setTerms((prev) => prev.map((t) => (t.id === updated.id ? updated : t)))
                           }
                         />
                       </td>
@@ -666,56 +550,38 @@ export function TermsTable({ initialData, initialCategories, initialCategory, ti
 
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <p className="text-xs text-zinc-400 dark:text-zinc-600">
-          {totalFiltered === data.length
-            ? `${data.length} term${data.length !== 1 ? 's' : ''}`
-            : `${totalFiltered} of ${data.length} term${data.length !== 1 ? 's' : ''}`}
+          {total} term{total !== 1 ? 's' : ''}
         </p>
 
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5">
-            <label className="text-xs text-zinc-500 dark:text-zinc-400">Per page</label>
-            <select
-              value={pageSize}
-              onChange={(e) => {
-                table.setPageSize(Number(e.target.value));
-                table.setPageIndex(0);
-              }}
-              className="text-xs border border-zinc-200 dark:border-zinc-700 rounded px-2 py-1 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 focus:outline-none"
-            >
-              {PAGE_SIZE_OPTIONS.map((size) => (
-                <option key={size} value={size}>{size}</option>
-              ))}
-            </select>
-          </div>
-
           <div className="flex items-center gap-1">
             <button
-              onClick={() => table.setPageIndex(0)}
-              disabled={!table.getCanPreviousPage()}
+              onClick={() => navigate({ page: 1 })}
+              disabled={currentPage <= 1}
               className="px-2 py-1 text-xs rounded border border-zinc-200 dark:border-zinc-700 disabled:opacity-40 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
             >
               «
             </button>
             <button
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
+              onClick={() => navigate({ page: currentPage - 1 })}
+              disabled={currentPage <= 1}
               className="px-2 py-1 text-xs rounded border border-zinc-200 dark:border-zinc-700 disabled:opacity-40 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
             >
               ‹
             </button>
             <span className="text-xs text-zinc-500 dark:text-zinc-400 px-2">
-              {pageCount === 0 ? '0 / 0' : `${pageIndex + 1} / ${pageCount}`}
+              {pageCount === 0 ? '0 / 0' : `${currentPage} / ${pageCount}`}
             </span>
             <button
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
+              onClick={() => navigate({ page: currentPage + 1 })}
+              disabled={currentPage >= pageCount}
               className="px-2 py-1 text-xs rounded border border-zinc-200 dark:border-zinc-700 disabled:opacity-40 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
             >
               ›
             </button>
             <button
-              onClick={() => table.setPageIndex(pageCount - 1)}
-              disabled={!table.getCanNextPage()}
+              onClick={() => navigate({ page: pageCount })}
+              disabled={currentPage >= pageCount}
               className="px-2 py-1 text-xs rounded border border-zinc-200 dark:border-zinc-700 disabled:opacity-40 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
             >
               »
