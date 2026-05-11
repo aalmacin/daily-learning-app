@@ -3,7 +3,7 @@
 import { APIResponseError } from '@notionhq/client';
 import { revalidatePath } from 'next/cache';
 import { type Term, getAllTerms, insertTerm, updateTerm, getUserSettings, getExplainedContent, insertExplainedContent, updateExplainedContent, markTermSynced } from '@/lib/db';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { getCurrentUser } from '@/lib/auth';
 import {
   createNotionPage,
   getAllNotionPages,
@@ -18,13 +18,10 @@ export async function addToNotion(
   termId: number,
   term: { name: string; content: string; categories: string[]; priority: string },
 ): Promise<Term> {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) throw new Error('Not authenticated');
 
-  const settings = await getUserSettings(supabase, user.id);
+  const settings = await getUserSettings(user.id);
   if (!settings?.notion_api_key || !settings?.notion_database_id) {
     throw new Error('Notion credentials not configured. Go to Settings to add your Notion API key and database ID.');
   }
@@ -33,7 +30,7 @@ export async function addToNotion(
     { apiKey: settings.notion_api_key, databaseId: settings.notion_database_id },
     term,
   );
-  const updated = await updateTerm(supabase, termId, { notion_page_id: pageId });
+  const updated = await updateTerm(termId, { notion_page_id: pageId });
 
   if (!updated) {
     throw new Error(`Term ${termId} not found`);
@@ -50,13 +47,10 @@ function isValidNotionId(id: string): boolean {
 }
 
 export async function syncWithNotion(): Promise<{ synced: number; imported: number; pushed: number; contentSynced: number; skipped: number; stale: string[]; dbError?: string }> {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) throw new Error('Not authenticated');
 
-  const settings = await getUserSettings(supabase, user.id);
+  const settings = await getUserSettings(user.id);
   if (!settings?.notion_api_key || !settings?.notion_database_id) {
     throw new Error('Notion credentials not configured. Go to Settings to add your Notion API key and database ID.');
   }
@@ -65,7 +59,7 @@ export async function syncWithNotion(): Promise<{ synced: number; imported: numb
   const timezone = settings.timezone;
 
   const [terms, notionPagesResult] = await Promise.all([
-    getAllTerms(supabase),
+    getAllTerms(),
     getAllNotionPages(credentials).catch((err: unknown) => err),
   ]);
 
@@ -106,7 +100,7 @@ export async function syncWithNotion(): Promise<{ synced: number; imported: numb
           calls.push(
             getNotionPageContent(credentials, pageId).then(async (notionContent) => {
               if (notionContent && notionContent !== term.content) {
-                await updateTerm(supabase, term.id, { content: notionContent });
+                await updateTerm(term.id, { content: notionContent });
               }
             }),
           );
@@ -118,29 +112,34 @@ export async function syncWithNotion(): Promise<{ synced: number; imported: numb
         }
 
         await Promise.all(calls);
-        await markTermSynced(supabase, term.id, notionPage?.lastEditedTime ?? term.notion_last_edited ?? '', notionPage?.dailyLearningDone ?? false, notionPage?.date ?? null);
+        await markTermSynced(term.id, notionPage?.lastEditedTime ?? term.notion_last_edited ?? '', notionPage?.dailyLearningDone ?? false, notionPage?.date ?? null);
       } catch (err) {
         if (err instanceof APIResponseError && STALE_NOTION_CODES.has(err.code)) {
           stale.push(term.name);
-          await updateTerm(supabase, term.id, { notion_page_id: null });
+          await updateTerm(term.id, { notion_page_id: null });
         }
       }
     }),
     // Push local terms not yet on Notion
     ...unsynced.map(async (term) => {
       const pageId = await createNotionPage(credentials, term);
-      await updateTerm(supabase, term.id, { notion_page_id: pageId });
+      await updateTerm(term.id, { notion_page_id: pageId });
       pushed++;
     }),
     // Import Notion pages that have no local DB entry
     ...notionOnly.map(async (page) => {
       const content = await getNotionPageContent(credentials, page.id);
-      await insertTerm(supabase, {
+      await insertTerm({
         name: page.name,
         content,
         categories: page.categories,
         priority: page.priority,
         notion_page_id: page.id,
+        updated_at: new Date().toISOString(),
+        notion_last_edited: null,
+        last_synced_at: null,
+        daily_learning_done: false,
+        notion_date: null,
       });
     }),
   ]);
@@ -156,10 +155,7 @@ export async function syncWithNotion(): Promise<{ synced: number; imported: numb
     });
 
     if (completedTerms.length > 0) {
-      const existing = await getExplainedContent(
-        supabase,
-        completedTerms.map((t) => t.id),
-      );
+      const existing = await getExplainedContent(completedTerms.map((t) => t.id));
       const existingByTermId = new Map(existing.map((e) => [e.term_id, e]));
 
       await Promise.allSettled(
@@ -176,10 +172,10 @@ export async function syncWithNotion(): Promise<{ synced: number; imported: numb
           if (row) {
             // Skip if Notion page hasn't been edited since last sync
             if (row.notion_last_edited === page.lastEditedTime) return;
-            await updateExplainedContent(supabase, row.id, content, explainedAt, page.lastEditedTime);
+            await updateExplainedContent(row.id, content, explainedAt, page.lastEditedTime);
             contentSynced++;
           } else {
-            await insertExplainedContent(supabase, term.id, content, explainedAt, page.lastEditedTime);
+            await insertExplainedContent(term.id, content, explainedAt, page.lastEditedTime);
             contentSynced++;
           }
         }),

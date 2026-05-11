@@ -1,10 +1,11 @@
+import Link from 'next/link';
+import { connection } from 'next/server';
 import { getAllCategories } from '@/lib/db';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { CategoriesManager } from '@/components/CategoriesManager';
 
 export default async function CategoriesPage() {
-  const supabase = await createSupabaseServerClient();
-  const categories = await getAllCategories(supabase);
+  await connection();
+  const categories = await getAllCategories();
 
   return (
     <div className="bg-zinc-50 dark:bg-black p-8">

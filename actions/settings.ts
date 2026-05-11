@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { getCurrentUser } from '@/lib/auth';
 import {
   getUserSettings,
   updateNotionDatabaseId,
@@ -12,55 +12,40 @@ import {
 import { createNotionDataSource as createNotionDataSourceInNotion } from '@/lib/notion';
 
 export async function getNotionSettings(): Promise<UserSettings | null> {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return null;
-  return getUserSettings(supabase, user.id);
+  return getUserSettings(user.id);
 }
 
 export async function saveNotionDatabaseId(databaseId: string): Promise<void> {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) throw new Error('Not authenticated');
-  await updateNotionDatabaseId(supabase, user.id, databaseId);
+  await updateNotionDatabaseId(user.id, databaseId);
   revalidatePath('/settings');
 }
 
 export async function disconnectNotion(): Promise<void> {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) throw new Error('Not authenticated');
-  await clearNotionCredentials(supabase, user.id);
+  await clearNotionCredentials(user.id);
   revalidatePath('/settings');
 }
 
 export async function saveTimezone(timezone: string): Promise<void> {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) throw new Error('Not authenticated');
-  await updateTimezone(supabase, user.id, timezone);
+  await updateTimezone(user.id, timezone);
   revalidatePath('/settings');
 }
 
 export async function createNotionDataSource(): Promise<void> {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) throw new Error('Not authenticated');
 
-  const settings = await getUserSettings(supabase, user.id);
+  const settings = await getUserSettings(user.id);
   if (!settings?.notion_api_key) throw new Error('Notion is not connected');
 
   const dataSource = await createNotionDataSourceInNotion(settings.notion_api_key);
-  await updateNotionDatabaseId(supabase, user.id, dataSource.id);
+  await updateNotionDatabaseId(user.id, dataSource.id);
   revalidatePath('/settings');
 }

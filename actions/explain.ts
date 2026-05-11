@@ -2,7 +2,7 @@
 
 import { getTerm, insertTerm, updateTerm, deleteTerm, getAllCategories, getUserSettings } from '@/lib/db';
 import { explainTermWithAI } from '@/lib/openai';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { getCurrentUser } from '@/lib/auth';
 import { createNotionPage, archiveNotionPage } from '@/lib/notion';
 import { revalidatePath } from 'next/cache';
 import type { Term } from '@/lib/db';
@@ -22,37 +22,40 @@ export async function explainTerm(rawName: string, context?: string): Promise<Ex
   const name = rawName.trim().toLowerCase();
   if (!name) throw new Error('Term name is required');
 
-  const supabase = await createSupabaseServerClient();
-
   if (!context) {
-    const cached = await getTerm(supabase, name);
+    const cached = await getTerm(name);
     if (cached) return { ...cached, alreadyExisted: true };
   }
 
-  const dbCategories = await getAllCategories(supabase);
+  const dbCategories = await getAllCategories();
   const categoryNames = dbCategories.map((c) => c.name);
   const explanation = await explainTermWithAI(name, categoryNames, context);
 
   let term: Term;
   try {
-    term = await insertTerm(supabase, {
+    term = await insertTerm({
       name: explanation.name.trim(),
       content: explanation.content,
       categories: explanation.categories,
       notion_page_id: null,
       priority: 'Medium',
+      updated_at: new Date().toISOString(),
+      notion_last_edited: null,
+      last_synced_at: null,
+      daily_learning_done: false,
+      notion_date: null,
     });
   } catch (err) {
     if (isDuplicateKeyError(err)) {
-      const existing = await getTerm(supabase, name);
+      const existing = await getTerm(name);
       if (existing) return { ...existing, alreadyExisted: true };
     }
     throw err;
   }
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (user) {
-    const settings = await getUserSettings(supabase, user.id);
+    const settings = await getUserSettings(user.id);
     if (settings?.notion_api_key && settings?.notion_database_id) {
       const credentials = { apiKey: settings.notion_api_key, databaseId: settings.notion_database_id };
       let notion_page_id: string | undefined;
@@ -63,13 +66,13 @@ export async function explainTerm(rawName: string, context?: string): Promise<Ex
           categories: term.categories,
           priority: term.priority,
         });
-        const synced = await updateTerm(supabase, term.id, { notion_page_id });
+        const synced = await updateTerm(term.id, { notion_page_id });
         return synced ?? term;
       } catch (err) {
         if (notion_page_id) {
           await archiveNotionPage(credentials, notion_page_id).catch(() => {});
         }
-        await deleteTerm(supabase, term.id);
+        await deleteTerm(term.id);
         throw err;
       }
     }

@@ -1,14 +1,11 @@
 'use server';
 
 import { type ReviewItem, getReviewItemsByMonth } from '@/lib/db';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { getCurrentUser } from '@/lib/auth';
 
 export async function getReviewData(year: number, month: number): Promise<ReviewItem[]> {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) throw new Error('Not authenticated');
 
-  return getReviewItemsByMonth(supabase, year, month);
+  return getReviewItemsByMonth(year, month);
 }

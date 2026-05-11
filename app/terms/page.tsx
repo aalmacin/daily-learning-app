@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { getAllTerms, getAllCategories, getUserSettings } from '@/lib/db';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { getCurrentUser } from '@/lib/auth';
 import { TermsTable } from '@/components/TermsTable';
 
 export default async function TermsPage({
@@ -9,12 +9,11 @@ export default async function TermsPage({
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const { category } = await searchParams;
-  const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   const [terms, categories, settings] = await Promise.all([
-    getAllTerms(supabase),
-    getAllCategories(supabase),
-    user ? getUserSettings(supabase, user.id) : null,
+    getAllTerms(),
+    getAllCategories(),
+    user ? getUserSettings(user.id) : null,
   ]);
   const initialCategory = typeof category === 'string' ? category : undefined;
   const notionConfigured = !!(settings?.notion_api_key && settings?.notion_database_id);
