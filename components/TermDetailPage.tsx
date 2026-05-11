@@ -55,14 +55,14 @@ export function TermDetailPage({ term, initialRefinements, initialChats, explain
   const [error, setError] = useState<string | null>(null);
   const [notionDone, setNotionDone] = useState(false);
   const [notionPageId, setNotionPageId] = useState(term.notion_page_id);
-  const [explanationDate, setExplanationDate] = useState(
-    () => term.notion_date?.slice(0, 10) ?? explainedAt?.slice(0, 10) ?? '',
-  );
+  const computedDate = term.notion_date?.slice(0, 10) ?? explainedAt?.slice(0, 10) ?? '';
+  const [explanationDate, setExplanationDate] = useState(computedDate);
+  const [prevComputedDate, setPrevComputedDate] = useState(computedDate);
+  if (computedDate !== prevComputedDate) {
+    setPrevComputedDate(computedDate);
+    setExplanationDate(computedDate);
+  }
   const [dateSaveStatus, setDateSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
-
-  useEffect(() => {
-    setExplanationDate(term.notion_date?.slice(0, 10) ?? explainedAt?.slice(0, 10) ?? '');
-  }, [term.notion_date, explainedAt]);
   const [allChats, setAllChats] = useState<Record<number, ChatMessage[]>>(initialChats);
   const [chatInput, setChatInput] = useState('');
 

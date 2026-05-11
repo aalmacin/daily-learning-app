@@ -1,6 +1,13 @@
 'use client';
 
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
+
+declare module '@tanstack/react-table' {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  interface ColumnMeta<TData, TValue> {
+    mobileHidden?: boolean;
+  }
+}
 import Link from 'next/link';
 import {
   useReactTable,
@@ -323,7 +330,21 @@ export function TermsTable({ initialData, initialCategories, initialCategory, ti
           </div>
         ),
       }),
+      columnHelper.display({
+        id: 'open',
+        header: '',
+        cell: ({ row }) => (
+          <Link
+            href={`/terms/${row.original.id}`}
+            onClick={(e) => e.stopPropagation()}
+            className="px-2 py-1 text-xs rounded bg-zinc-100 text-zinc-700 hover:bg-zinc-200 transition-colors dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 whitespace-nowrap"
+          >
+            Open
+          </Link>
+        ),
+      }),
       columnHelper.accessor('created_at', {
+        meta: { mobileHidden: true },
         header: 'Created',
         enableSorting: true,
         cell: (info) =>
@@ -337,6 +358,7 @@ export function TermsTable({ initialData, initialCategories, initialCategory, ti
       columnHelper.accessor('priority', {
         header: 'Priority',
         enableSorting: true,
+        meta: { mobileHidden: true },
         cell: (info) => {
           const val = info.getValue();
           const color =
@@ -351,6 +373,7 @@ export function TermsTable({ initialData, initialCategories, initialCategory, ti
       columnHelper.accessor('explained', {
         header: 'Explained',
         enableSorting: true,
+        meta: { mobileHidden: true },
         cell: (info) => (
           <span className={info.getValue() ? 'text-green-600' : 'text-zinc-400'}>
             {info.getValue() ? '✓' : '—'}
@@ -360,6 +383,7 @@ export function TermsTable({ initialData, initialCategories, initialCategory, ti
       columnHelper.accessor('notion_page_id', {
         header: 'Notion',
         enableSorting: false,
+        meta: { mobileHidden: true },
         cell: (info) => (
           <span className={info.getValue() ? 'text-green-600' : 'text-zinc-400'}>
             {info.getValue() ? '✓' : '—'}
@@ -368,7 +392,8 @@ export function TermsTable({ initialData, initialCategories, initialCategory, ti
       }),
       columnHelper.display({
         id: 'actions',
-        header: 'Actions',
+        header: '',
+        meta: { mobileHidden: true },
         cell: ({ row }) => {
           const term = row.original;
           const isDeleting = deleteMutation.isPending && deleteMutation.variables === term.id;
@@ -380,13 +405,6 @@ export function TermsTable({ initialData, initialCategories, initialCategory, ti
           return (
             <div className="flex flex-col gap-1">
               <div className="flex gap-2">
-                <Link
-                  href={`/terms/${term.id}`}
-                  onClick={(e) => e.stopPropagation()}
-                  className="px-2 py-1 text-xs rounded bg-zinc-100 text-zinc-700 hover:bg-zinc-200 transition-colors dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
-                >
-                  Open
-                </Link>
                 {isConfirmingDelete ? (
                   <>
                     <button
@@ -478,13 +496,13 @@ export function TermsTable({ initialData, initialCategories, initialCategory, ti
       {syncMutation.isError && (
         <p className="text-sm text-red-600 dark:text-red-400">Sync failed. Please try again.</p>
       )}
-      <div className="flex flex-wrap gap-4 items-start">
+      <div className="flex flex-wrap gap-2 md:gap-4 items-start">
         <input
           type="text"
           placeholder="Search terms…"
           value={globalFilter}
           onChange={(e) => setGlobalFilter(e.target.value)}
-          className="flex-1 min-w-[200px] px-3 py-2 text-sm border border-zinc-200 rounded-lg bg-white dark:bg-zinc-900 dark:border-zinc-700 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:focus:ring-zinc-600"
+          className="w-full md:flex-1 md:min-w-[200px] px-3 py-2 text-sm border border-zinc-200 rounded-lg bg-white dark:bg-zinc-900 dark:border-zinc-700 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:focus:ring-zinc-600"
         />
         <button
           onClick={() => syncMutation.mutate()}
@@ -558,7 +576,7 @@ export function TermsTable({ initialData, initialCategories, initialCategory, ti
                 {headerGroup.headers.map((header) => (
                   <th
                     key={header.id}
-                    className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider"
+                    className={`px-2 py-2 md:px-4 md:py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider${header.column.columnDef.meta?.mobileHidden ? ' hidden md:table-cell' : ''}`}
                   >
                     {header.column.getCanSort() ? (
                       <button
@@ -602,9 +620,9 @@ export function TermsTable({ initialData, initialCategories, initialCategory, ti
                     {row.getVisibleCells().map((cell) => (
                       <td
                         key={cell.id}
-                        className="px-4 py-3 text-zinc-700 dark:text-zinc-300"
+                        className={`px-2 py-2 md:px-4 md:py-3 text-zinc-700 dark:text-zinc-300${cell.column.columnDef.meta?.mobileHidden ? ' hidden md:table-cell' : ''}`}
                         onClick={
-                          cell.column.id === 'actions'
+                          cell.column.id === 'actions' || cell.column.id === 'open'
                             ? (e) => e.stopPropagation()
                             : undefined
                         }
