@@ -266,7 +266,6 @@ export async function getAllTerms(): Promise<Term[]> {
 }
 
 export async function insertTerm(term: Omit<Term, 'id' | 'created_at' | 'explained'>): Promise<Term> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await getSupabase()
     .from('terms')
     .insert({
@@ -274,6 +273,7 @@ export async function insertTerm(term: Omit<Term, 'id' | 'created_at' | 'explain
       content: term.content,
       notion_page_id: term.notion_page_id ?? null,
       priority: term.priority ?? 'Medium',
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any)
     .select()
     .single();
