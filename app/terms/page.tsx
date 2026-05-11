@@ -20,7 +20,7 @@ export default async function TermsPage({
   const notionConfigured = !!(settings?.notion_api_key && settings?.notion_database_id);
 
   return (
-    <div className="bg-zinc-50 dark:bg-black p-8">
+    <div className="bg-zinc-50 dark:bg-black p-4 md:p-8">
       <div className="max-w-6xl mx-auto">
         {!notionConfigured && (
           <div className="mb-6 rounded-md border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950 px-4 py-3 flex items-center justify-between gap-4">
