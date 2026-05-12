@@ -450,7 +450,7 @@ export async function setPreRefinement(
 ): Promise<ConceptRefinement> {
   const { data, error } = await getSupabase()
     .from('concept_refinements')
-    .update({ pre_refinement: preRefinement, pre_refinement_accuracy: accuracy, pre_refinement_review: review })
+    .update({ pre_refinement: preRefinement, pre_refinement_accuracy: accuracy, pre_refinement_review: review } as unknown as never)
     .eq('id', id)
     .select()
     .single();
@@ -522,7 +522,7 @@ export async function insertChatMessages(
 ): Promise<ChatMessage[]> {
   const { data, error } = await getSupabase()
     .from('research_chats')
-    .insert(messages)
+    .insert(messages as unknown as never)
     .select();
   if (error) throw error;
   return data as ChatMessage[];
@@ -544,7 +544,7 @@ export async function upsertUserSettings(
 ): Promise<UserSettings> {
   const { data, error } = await getSupabase()
     .from('user_settings')
-    .upsert({ user_id: userId, ...settings, updated_at: new Date().toISOString() })
+    .upsert({ user_id: userId, ...settings, updated_at: new Date().toISOString() } as unknown as never)
     .select()
     .single();
   if (error) throw error;
@@ -554,7 +554,7 @@ export async function upsertUserSettings(
 export async function updateNotionDatabaseId(userId: string, databaseId: string): Promise<void> {
   const { error } = await getSupabase()
     .from('user_settings')
-    .update({ notion_database_id: databaseId, updated_at: new Date().toISOString() })
+    .update({ notion_database_id: databaseId, updated_at: new Date().toISOString() } as unknown as never)
     .eq('user_id', userId);
   if (error) throw error;
 }
@@ -562,14 +562,14 @@ export async function updateNotionDatabaseId(userId: string, databaseId: string)
 export async function updateTimezone(userId: string, timezone: string): Promise<void> {
   const { error } = await getSupabase()
     .from('user_settings')
-    .upsert({ user_id: userId, timezone, updated_at: new Date().toISOString() });
+    .upsert({ user_id: userId, timezone, updated_at: new Date().toISOString() } as unknown as never);
   if (error) throw error;
 }
 
 export async function clearNotionCredentials(userId: string): Promise<void> {
   const { error } = await getSupabase()
     .from('user_settings')
-    .update({ notion_api_key: null, notion_database_id: null, updated_at: new Date().toISOString() })
+    .update({ notion_api_key: null, notion_database_id: null, updated_at: new Date().toISOString() } as unknown as never)
     .eq('user_id', userId);
   if (error) throw error;
 }
@@ -577,7 +577,7 @@ export async function clearNotionCredentials(userId: string): Promise<void> {
 export async function setTermNotionDate(termId: number, date: string): Promise<void> {
   const { error } = await getSupabase()
     .from('terms')
-    .update({ notion_date: date })
+    .update({ notion_date: date } as unknown as never)
     .eq('id', termId);
   if (error) throw error;
 }
@@ -595,7 +595,7 @@ export async function markTermSynced(
       last_synced_at: new Date().toISOString(),
       daily_learning_done: dailyLearningDone,
       notion_date: notionDate,
-    })
+    } as unknown as never)
     .eq('id', termId);
   if (error) throw error;
 }
@@ -638,7 +638,7 @@ export async function updateExplainedContent(
 ): Promise<void> {
   const { error } = await getSupabase()
     .from('term_explained_content')
-    .update({ notion_content: notionContent, explained_at: explainedAt, notion_last_edited: notionLastEdited })
+    .update({ notion_content: notionContent, explained_at: explainedAt, notion_last_edited: notionLastEdited } as unknown as never)
     .eq('id', id);
   if (error) throw error;
 }
@@ -651,7 +651,7 @@ export async function insertExplainedContent(
 ): Promise<void> {
   const { error } = await getSupabase()
     .from('term_explained_content')
-    .insert({ term_id: termId, notion_content: notionContent, explained_at: explainedAt, notion_last_edited: notionLastEdited });
+    .insert({ term_id: termId, notion_content: notionContent, explained_at: explainedAt, notion_last_edited: notionLastEdited } as unknown as never);
   if (error) throw error;
 }
 
