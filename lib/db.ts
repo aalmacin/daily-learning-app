@@ -93,12 +93,13 @@ async function getCategoriesForTerm(termId: number): Promise<string[]> {
   return (cats as { name: string }[]).map((c) => c.name);
 }
 
-async function upsertCategories(names: string[]): Promise<number[]> {
+async function upsertCategories(names: string[], userId: string): Promise<number[]> {
   if (names.length === 0) return [];
   const { data: existing, error: selectError } = await getSupabase()
     .from('categories')
     .select('id, name')
-    .in('name', names);
+    .in('name', names)
+    .eq('user_id', userId);
   if (selectError) throw selectError;
 
   const existingMap = new Map((existing as Category[]).map((c) => [c.name, c.id]));
@@ -108,7 +109,7 @@ async function upsertCategories(names: string[]): Promise<number[]> {
     const { data: inserted, error: insertError } = await getSupabase()
       .from('categories')
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .insert(missing.map((name) => ({ name })) as any)
+      .insert(missing.map((name) => ({ name, user_id: userId })) as any)
       .select('id, name');
     if (insertError) throw insertError;
     for (const cat of inserted as Category[]) {
@@ -283,7 +284,7 @@ export async function getAllTerms(): Promise<Term[]> {
   }));
 }
 
-export async function insertTerm(term: Omit<Term, 'id' | 'created_at' | 'explained'>): Promise<Term> {
+export async function insertTerm(term: Omit<Term, 'id' | 'created_at' | 'explained'>, userId: string): Promise<Term> {
   const { data, error } = await getSupabase()
     .from('terms')
     .insert({
@@ -291,13 +292,14 @@ export async function insertTerm(term: Omit<Term, 'id' | 'created_at' | 'explain
       content: term.content,
       notion_page_id: term.notion_page_id ?? null,
       priority: term.priority ?? 'Medium',
+      user_id: userId,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any)
     .select()
     .single();
   if (error) throw error;
   const row = data as TermRow;
-  const categoryIds = await upsertCategories(term.categories);
+  const categoryIds = await upsertCategories(term.categories, userId);
   await setTermCategories(row.id, categoryIds);
   return { ...row, categories: term.categories, explained: false };
 }
@@ -305,6 +307,7 @@ export async function insertTerm(term: Omit<Term, 'id' | 'created_at' | 'explain
 export async function updateTerm(
   id: number,
   updates: Partial<Omit<Term, 'id' | 'created_at' | 'updated_at' | 'notion_last_edited' | 'last_synced_at' | 'explained' | 'daily_learning_done' | 'notion_date'>>,
+  userId?: string,
 ): Promise<Term | null> {
   const fields: Partial<TermRow> = {};
   if (updates.name !== undefined) fields.name = updates.name;
@@ -334,8 +337,8 @@ export async function updateTerm(
     row = data as TermRow;
   }
 
-  if (updates.categories !== undefined) {
-    const categoryIds = await upsertCategories(updates.categories);
+  if (updates.categories !== undefined && userId) {
+    const categoryIds = await upsertCategories(updates.categories, userId);
     await setTermCategories(row.id, categoryIds);
   }
 
@@ -351,17 +354,18 @@ export async function deleteTerm(id: number): Promise<void> {
   if (error) throw error;
 }
 
-export async function insertCategory(name: string): Promise<Category> {
+export async function insertCategory(name: string, userId: string): Promise<Category> {
   const { data: existing } = await getSupabase()
     .from('categories')
     .select('*')
     .eq('name', name)
+    .eq('user_id', userId)
     .maybeSingle();
   if (existing) return existing as Category;
   const { data, error } = await getSupabase()
     .from('categories')
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .insert({ name } as any)
+    .insert({ name, user_id: userId } as any)
     .select()
     .single();
   if (error) throw error;
@@ -376,8 +380,9 @@ export async function deleteCategory(id: number): Promise<void> {
 export async function updateTermCategories(
   termId: number,
   categories: string[],
+  userId: string,
 ): Promise<Term | null> {
-  return updateTerm(termId, { categories });
+  return updateTerm(termId, { categories }, userId);
 }
 
 export const getTermById = cache(async (id: number): Promise<Term | null> => {
