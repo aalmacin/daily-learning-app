@@ -1,9 +1,10 @@
 import Link from 'next/link';
-import { getTermsPaginated, getAllCategories } from '@/lib/db';
+import { getTermsPaginated, getAllCategories, getUserSettings } from '@/lib/db';
+import { getCurrentUser } from '@/lib/auth';
 import { TermsTable } from '@/components/TermsTable';
-import type { TermsQuery } from '@/lib/db';
+import type { TermsQuery, Priority } from '@/lib/db';
 
-const PAGE_SIZE = 25;
+const PAGE_SIZE_OPTIONS = [10, 25, 50];
 
 export default async function TermsPage({
   searchParams,
@@ -22,45 +23,62 @@ export default async function TermsPage({
         ? rawCategory
         : [];
   const notion: TermsQuery['notion'] =
-    params.notion === 'added' || params.notion === 'all' ? params.notion : 'pending';
+    params.notion === 'added' || params.notion === 'pending' ? params.notion : 'all';
   const sort: TermsQuery['sort'] =
     params.sort === 'name' || params.sort === 'priority' ? params.sort : 'created_at';
   const dir: TermsQuery['dir'] = params.dir === 'asc' ? 'asc' : 'desc';
+  const rawPriority = params.priority;
+  const priority: Priority | 'all' =
+    rawPriority === 'High' || rawPriority === 'Medium' || rawPriority === 'Low'
+      ? rawPriority
+      : 'all';
+  const rawDailyLearning = params.dailyLearning;
+  const dailyLearning: 'all' | 'done' | 'not-done' =
+    rawDailyLearning === 'done' || rawDailyLearning === 'not-done' ? rawDailyLearning : 'all';
+  const rawPageSize = Number(params.pageSize);
+  const pageSize = PAGE_SIZE_OPTIONS.includes(rawPageSize) ? rawPageSize : 10;
 
-  const [{ terms, total }, categories] = await Promise.all([
-    getTermsPaginated({ page, pageSize: PAGE_SIZE, q, categoryNames, notion, sort, dir }),
+  const user = await getCurrentUser();
+
+  const [{ terms, total }, categories, settings] = await Promise.all([
+    getTermsPaginated({ page, pageSize, q, categoryNames, notion, sort, dir, priority, dailyLearning }),
     getAllCategories(),
+    user ? getUserSettings(user.id) : null,
   ]);
+
+  const notionConfigured = !!(settings?.notion_api_key && settings?.notion_database_id);
 
   return (
     <div className="bg-zinc-50 dark:bg-black p-4 md:p-8">
       <div className="max-w-6xl mx-auto">
-        <div className="mb-6 flex items-center gap-4">
-          <Link
-            href="/"
-            className="text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
-          >
-            ← Home
-          </Link>
-          <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">Terms</h1>
-          <Link
-            href="/categories"
-            className="ml-auto text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
-          >
-            Manage Categories
-          </Link>
-        </div>
+        {!notionConfigured && (
+          <div className="mb-6 rounded-md border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950 px-4 py-3 flex items-center justify-between gap-4">
+            <p className="text-sm text-amber-800 dark:text-amber-300">
+              Notion is not configured. Set up your API key and database ID to export terms.
+            </p>
+            <Link
+              href="/settings"
+              className="shrink-0 text-sm font-medium text-amber-900 dark:text-amber-200 underline underline-offset-2 hover:no-underline"
+            >
+              Go to Settings
+            </Link>
+          </div>
+        )}
+        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50 mb-6">Terms</h1>
         <TermsTable
           initialTerms={terms}
           total={total}
           allCategories={categories}
           currentPage={page}
-          pageSize={PAGE_SIZE}
+          pageSize={pageSize}
           currentQ={q}
           currentCategories={categoryNames}
           currentNotion={notion}
+          currentPriority={priority}
+          currentDailyLearning={dailyLearning}
           currentSort={sort}
           currentDir={dir}
+          timezone={settings?.timezone ?? 'UTC'}
         />
       </div>
     </div>

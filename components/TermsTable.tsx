@@ -20,11 +20,12 @@ import {
 } from '@tanstack/react-table';
 import { useMutation } from '@tanstack/react-query';
 import { deleteTerm, updateTermPriority } from '@/actions/terms';
-import { addToNotion } from '@/actions/notion';
+import { addToNotion, syncWithNotion } from '@/actions/notion';
 import { updateTermCategories } from '@/actions/categories';
 import type { Term, Category, Priority } from '@/lib/db';
 
 const PRIORITIES: Priority[] = ['High', 'Medium', 'Low'];
+const PAGE_SIZE_OPTIONS = [10, 25, 50];
 
 const columnHelper = createColumnHelper<Term>();
 
@@ -108,6 +109,86 @@ function PriorityEditor({ term, onSaved }: { term: Term; onSaved: (updated: Term
   );
 }
 
+function CategoryFilterDropdown({ categories, selected, onChange }: {
+  categories: string[];
+  selected: string[];
+  onChange: (cats: string[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const filtered = categories.filter((c) => c.toLowerCase().includes(search.toLowerCase()));
+
+  const toggle = (cat: string) =>
+    onChange(selected.includes(cat) ? selected.filter((c) => c !== cat) : [...selected, cat]);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-2 px-3 py-2 text-xs font-medium rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+      >
+        {selected.length > 0 ? `${selected.length} categor${selected.length === 1 ? 'y' : 'ies'}` : 'Filter by category'}
+        <span className="text-zinc-400">▾</span>
+      </button>
+      {open && (
+        <div className="absolute z-10 mt-1 w-56 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-lg">
+          <div className="p-2 border-b border-zinc-100 dark:border-zinc-800">
+            <input
+              type="text"
+              placeholder="Search categories…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full px-2 py-1.5 text-xs rounded border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:focus:ring-zinc-600"
+              autoFocus
+            />
+          </div>
+          <ul className="max-h-48 overflow-y-auto py-1">
+            {filtered.length === 0 ? (
+              <li className="px-3 py-2 text-xs text-zinc-400">No categories found</li>
+            ) : (
+              filtered.map((cat) => (
+                <li key={cat}>
+                  <label className="flex items-center gap-2 px-3 py-1.5 text-xs text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={selected.includes(cat)}
+                      onChange={() => toggle(cat)}
+                      className="accent-zinc-900 dark:accent-zinc-50"
+                    />
+                    {cat}
+                  </label>
+                </li>
+              ))
+            )}
+          </ul>
+          {selected.length > 0 && (
+            <div className="p-2 border-t border-zinc-100 dark:border-zinc-800">
+              <button
+                type="button"
+                onClick={() => onChange([])}
+                className="text-xs text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
+              >
+                Clear all
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 type TermsTableProps = {
   initialTerms: Term[];
   total: number;
@@ -117,8 +198,11 @@ type TermsTableProps = {
   currentQ: string;
   currentCategories: string[];
   currentNotion: 'pending' | 'added' | 'all';
+  currentPriority: Priority | 'all';
+  currentDailyLearning: 'all' | 'done' | 'not-done';
   currentSort: 'created_at' | 'name' | 'priority';
   currentDir: 'asc' | 'desc';
+  timezone: string;
 };
 
 export function TermsTable({
@@ -130,8 +214,11 @@ export function TermsTable({
   currentQ,
   currentCategories,
   currentNotion,
+  currentPriority,
+  currentDailyLearning,
   currentSort,
   currentDir,
+  timezone,
 }: TermsTableProps) {
   const router = useRouter();
   const [terms, setTerms] = useState<Term[]>(initialTerms);
@@ -140,16 +227,17 @@ export function TermsTable({
   const [notionSuccessId, setNotionSuccessId] = useState<number | null>(null);
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<number | null>(null);
   const [deleteSuccess, setDeleteSuccess] = useState(false);
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
+  const [staleTerms, setStaleTerms] = useState<string[]>([]);
+  const [syncDbError, setSyncDbError] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Sync server data when URL-driven props change (Next.js preserves client state across navigations)
   useEffect(() => {
     setTerms(initialTerms);
     setExpanded({});
     setSearchInput(currentQ);
   }, [initialTerms, currentQ]);
 
-  // Cleanup pending debounce timeout on unmount
   useEffect(() => {
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -162,26 +250,35 @@ export function TermsTable({
     q: string;
     categories: string[];
     notion: 'pending' | 'added' | 'all';
+    priority: Priority | 'all';
+    dailyLearning: 'all' | 'done' | 'not-done';
     sort: 'created_at' | 'name' | 'priority';
     dir: 'asc' | 'desc';
     page: number;
+    pageSize: number;
   }>): string {
     const merged = {
       q: searchInput,
       categories: currentCategories,
       notion: currentNotion,
+      priority: currentPriority,
+      dailyLearning: currentDailyLearning,
       sort: currentSort,
       dir: currentDir,
       page: currentPage,
+      pageSize,
       ...overrides,
     };
     const params = new URLSearchParams();
     if (merged.q) params.set('q', merged.q);
     merged.categories.forEach((c) => params.append('category', c));
-    if (merged.notion !== 'pending') params.set('notion', merged.notion);
+    if (merged.notion !== 'all') params.set('notion', merged.notion);
+    if (merged.priority !== 'all') params.set('priority', merged.priority);
+    if (merged.dailyLearning !== 'all') params.set('dailyLearning', merged.dailyLearning);
     if (merged.sort !== 'created_at') params.set('sort', merged.sort);
     if (merged.dir !== 'desc') params.set('dir', merged.dir);
     if (merged.page !== 1) params.set('page', String(merged.page));
+    if (merged.pageSize !== 10) params.set('pageSize', String(merged.pageSize));
     const qs = params.toString();
     return qs ? `/terms?${qs}` : '/terms';
   }
@@ -198,16 +295,8 @@ export function TermsTable({
     }, 300);
   }
 
-  function toggleCategory(cat: string) {
-    const next = currentCategories.includes(cat)
-      ? currentCategories.filter((c) => c !== cat)
-      : [...currentCategories, cat];
-    navigate({ categories: next, page: 1 });
-  }
-
   function handleSort(column: 'created_at' | 'name' | 'priority') {
-    const newDir =
-      currentSort === column && currentDir === 'desc' ? 'asc' : 'desc';
+    const newDir = currentSort === column && currentDir === 'desc' ? 'asc' : 'desc';
     navigate({ sort: column, dir: newDir, page: 1 });
   }
 
@@ -232,6 +321,22 @@ export function TermsTable({
       setTerms((prev) => prev.map((t) => (t.id === term.id ? updatedTerm : t)));
       setNotionSuccessId(term.id);
       setTimeout(() => setNotionSuccessId(null), 3000);
+    },
+  });
+
+  const syncMutation = useMutation({
+    mutationFn: syncWithNotion,
+    onSuccess: ({ synced, imported, pushed, contentSynced, skipped, stale, dbError }) => {
+      router.refresh();
+      const parts = [`Synced ${synced} term${synced !== 1 ? 's' : ''} with Notion.`];
+      if (pushed > 0) parts.push(`Pushed ${pushed} new term${pushed !== 1 ? 's' : ''} to Notion.`);
+      if (imported > 0) parts.push(`Imported ${imported} new term${imported !== 1 ? 's' : ''} from Notion.`);
+      if (contentSynced > 0) parts.push(`Downloaded ${contentSynced} explained concept${contentSynced !== 1 ? 's' : ''}.`);
+      if (skipped > 0) parts.push(`Skipped ${skipped} unchanged.`);
+      setSyncMessage(parts.join(' '));
+      setStaleTerms(stale);
+      setSyncDbError(dbError ?? null);
+      setTimeout(() => setSyncMessage(null), 4000);
     },
   });
 
@@ -310,6 +415,7 @@ export function TermsTable({
             year: 'numeric',
             month: 'short',
             day: 'numeric',
+            timeZone: timezone,
           }),
       }),
       columnHelper.accessor('priority', {
@@ -403,7 +509,7 @@ export function TermsTable({
         },
       }),
     ],
-    [deleteMutation, addToNotionMutation, notionSuccessId, confirmingDeleteId, currentSort, currentDir],
+    [deleteMutation, addToNotionMutation, notionSuccessId, confirmingDeleteId, currentSort, currentDir, timezone],
   );
 
   const table = useReactTable({
@@ -416,60 +522,101 @@ export function TermsTable({
     getRowCanExpand: () => true,
   });
 
+  const categoryNames = allCategories.map((c) => c.name);
+
   return (
     <div className="space-y-4">
       {deleteSuccess && (
         <p className="text-sm text-green-600 dark:text-green-400">Term deleted successfully.</p>
       )}
-      <div className="flex flex-wrap gap-2 md:gap-4 items-start">
-        <input
-          type="text"
-          placeholder="Search terms…"
-          value={searchInput}
-          onChange={(e) => handleSearchChange(e.target.value)}
-          className="w-full md:flex-1 md:min-w-[200px] px-3 py-2 text-sm border border-zinc-200 rounded-lg bg-white dark:bg-zinc-900 dark:border-zinc-700 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:focus:ring-zinc-600"
-        />
-        <div className="flex items-center gap-1 border border-zinc-200 dark:border-zinc-700 rounded-lg overflow-hidden">
-          {(['all', 'pending', 'added'] as const).map((val) => (
-            <button
-              key={val}
-              onClick={() => navigate({ notion: val, page: 1 })}
-              className={`px-3 py-2 text-xs font-medium transition-colors ${
-                currentNotion === val
-                  ? 'bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900'
-                  : 'bg-white dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800'
-              }`}
-            >
-              {val === 'pending' ? 'Not on Notion' : val === 'added' ? 'On Notion' : 'All'}
-            </button>
-          ))}
+      {syncMessage && (
+        <p className="text-sm text-green-600 dark:text-green-400">{syncMessage}</p>
+      )}
+      {staleTerms.length > 0 && (
+        <div className="text-sm text-yellow-600 dark:text-yellow-400">
+          <p className="font-medium">Unlinked {staleTerms.length} stale Notion page{staleTerms.length !== 1 ? 's' : ''}:</p>
+          <ul className="list-disc list-inside mt-1">
+            {staleTerms.map((name) => <li key={name}>{name}</li>)}
+          </ul>
         </div>
-        {allCategories.length > 0 && (
-          <div className="flex flex-wrap gap-2 items-center">
-            <span className="text-xs text-zinc-500 dark:text-zinc-400">Filter by category:</span>
-            {allCategories.map((cat) => (
+      )}
+      {syncDbError && (
+        <p className="text-sm text-yellow-600 dark:text-yellow-400">Could not query Notion database: {syncDbError}</p>
+      )}
+      {syncMutation.isError && (
+        <p className="text-sm text-red-600 dark:text-red-400">Sync failed. Please try again.</p>
+      )}
+      <div className="space-y-2">
+        <div className="flex flex-wrap gap-2 items-center">
+          <input
+            type="text"
+            placeholder="Search terms…"
+            value={searchInput}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            className="flex-1 min-w-[200px] px-3 py-2 text-sm border border-zinc-200 rounded-lg bg-white dark:bg-zinc-900 dark:border-zinc-700 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:focus:ring-zinc-600"
+          />
+          <button
+            onClick={() => syncMutation.mutate()}
+            disabled={syncMutation.isPending}
+            className="px-3 py-2 text-xs font-medium rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+          >
+            {syncMutation.isPending ? 'Syncing…' : 'Sync with Notion'}
+          </button>
+          <div className="flex items-center gap-1 border border-zinc-200 dark:border-zinc-700 rounded-lg overflow-hidden">
+            {(['all', 'pending', 'added'] as const).map((val) => (
               <button
-                key={cat.id}
-                onClick={() => toggleCategory(cat.name)}
-                className={`px-2 py-1 text-xs rounded-full border transition-colors ${
-                  currentCategories.includes(cat.name)
-                    ? 'bg-zinc-900 text-white border-zinc-900 dark:bg-zinc-50 dark:text-zinc-900 dark:border-zinc-50'
-                    : 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-400 dark:bg-zinc-900 dark:text-zinc-400 dark:border-zinc-700 dark:hover:border-zinc-500'
+                key={val}
+                onClick={() => navigate({ notion: val, page: 1 })}
+                className={`px-3 py-2 text-xs font-medium transition-colors ${
+                  currentNotion === val
+                    ? 'bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900'
+                    : 'bg-white dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800'
                 }`}
               >
-                {cat.name}
+                {val === 'pending' ? 'Not on Notion' : val === 'added' ? 'On Notion' : 'All'}
               </button>
             ))}
-            {currentCategories.length > 0 && (
-              <button
-                onClick={() => navigate({ categories: [], page: 1 })}
-                className="text-xs text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
-              >
-                Clear
-              </button>
-            )}
           </div>
-        )}
+          <div className="flex items-center gap-1 border border-zinc-200 dark:border-zinc-700 rounded-lg overflow-hidden">
+            {(['all', ...PRIORITIES] as const).map((val) => (
+              <button
+                key={val}
+                onClick={() => navigate({ priority: val, page: 1 })}
+                className={`px-3 py-2 text-xs font-medium transition-colors ${
+                  currentPriority === val
+                    ? 'bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900'
+                    : 'bg-white dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800'
+                }`}
+              >
+                {val === 'all' ? 'All priorities' : val}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2 items-center">
+          <div className="flex items-center gap-1 border border-zinc-200 dark:border-zinc-700 rounded-lg overflow-hidden">
+            {(['all', 'done', 'not-done'] as const).map((val) => (
+              <button
+                key={val}
+                onClick={() => navigate({ dailyLearning: val, page: 1 })}
+                className={`px-3 py-2 text-xs font-medium transition-colors ${
+                  currentDailyLearning === val
+                    ? 'bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900'
+                    : 'bg-white dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800'
+                }`}
+              >
+                {val === 'done' ? 'Learning done' : val === 'not-done' ? 'Learning pending' : 'All learning'}
+              </button>
+            ))}
+          </div>
+          {categoryNames.length > 0 && (
+            <CategoryFilterDropdown
+              categories={categoryNames}
+              selected={currentCategories}
+              onChange={(cats) => navigate({ categories: cats, page: 1 })}
+            />
+          )}
+        </div>
       </div>
 
       <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-800">
@@ -554,6 +701,19 @@ export function TermsTable({
         </p>
 
         <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5">
+            <label className="text-xs text-zinc-500 dark:text-zinc-400">Per page</label>
+            <select
+              value={pageSize}
+              onChange={(e) => navigate({ pageSize: Number(e.target.value), page: 1 })}
+              className="text-xs border border-zinc-200 dark:border-zinc-700 rounded px-2 py-1 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 focus:outline-none"
+            >
+              {PAGE_SIZE_OPTIONS.map((size) => (
+                <option key={size} value={size}>{size}</option>
+              ))}
+            </select>
+          </div>
+
           <div className="flex items-center gap-1">
             <button
               onClick={() => navigate({ page: 1 })}

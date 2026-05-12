@@ -52,6 +52,8 @@ export type TermsQuery = {
   q?: string;
   categoryNames?: string[];
   notion?: 'pending' | 'added' | 'all';
+  priority?: Priority | 'all';
+  dailyLearning?: 'all' | 'done' | 'not-done';
   sort?: 'created_at' | 'name' | 'priority';
   dir?: 'asc' | 'desc';
 };
@@ -93,17 +95,28 @@ async function getCategoriesForTerm(termId: number): Promise<string[]> {
 
 async function upsertCategories(names: string[]): Promise<number[]> {
   if (names.length === 0) return [];
-  const { error } = await getSupabase()
-    .from('categories')
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .upsert(names.map((name) => ({ name })) as any, { onConflict: 'name', ignoreDuplicates: true });
-  if (error) throw error;
-  const { data, error: selectError } = await getSupabase()
+  const { data: existing, error: selectError } = await getSupabase()
     .from('categories')
     .select('id, name')
     .in('name', names);
   if (selectError) throw selectError;
-  return (data as Category[]).map((c) => c.id);
+
+  const existingMap = new Map((existing as Category[]).map((c) => [c.name, c.id]));
+  const missing = names.filter((n) => !existingMap.has(n));
+
+  if (missing.length > 0) {
+    const { data: inserted, error: insertError } = await getSupabase()
+      .from('categories')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .insert(missing.map((name) => ({ name })) as any)
+      .select('id, name');
+    if (insertError) throw insertError;
+    for (const cat of inserted as Category[]) {
+      existingMap.set(cat.name, cat.id);
+    }
+  }
+
+  return names.map((n) => existingMap.get(n)).filter((id): id is number => id !== undefined);
 }
 
 async function setTermCategories(termId: number, categoryIds: number[]): Promise<void> {
@@ -137,6 +150,8 @@ export async function getTermsPaginated({
   q,
   categoryNames,
   notion,
+  priority,
+  dailyLearning,
   sort = 'created_at',
   dir = 'desc',
 }: TermsQuery): Promise<TermsPage> {
@@ -166,6 +181,9 @@ export async function getTermsPaginated({
   if (q) query = query.ilike('name', `%${q}%`);
   if (notion === 'pending') query = query.is('notion_page_id', null);
   if (notion === 'added') query = query.not('notion_page_id', 'is', null);
+  if (priority && priority !== 'all') query = query.eq('priority', priority);
+  if (dailyLearning === 'done') query = query.eq('daily_learning_done', true);
+  if (dailyLearning === 'not-done') query = query.eq('daily_learning_done', false);
   if (termIdFilter !== null) query = query.in('id', termIdFilter);
   query = query.order(sort, { ascending: dir === 'asc' }).range(offset, offset + pageSize - 1);
 
@@ -334,17 +352,19 @@ export async function deleteTerm(id: number): Promise<void> {
 }
 
 export async function insertCategory(name: string): Promise<Category> {
-  const { error } = await getSupabase()
-    .from('categories')
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .upsert({ name } as any, { onConflict: 'name', ignoreDuplicates: true });
-  if (error) throw error;
-  const { data, error: selectError } = await getSupabase()
+  const { data: existing } = await getSupabase()
     .from('categories')
     .select('*')
     .eq('name', name)
+    .maybeSingle();
+  if (existing) return existing as Category;
+  const { data, error } = await getSupabase()
+    .from('categories')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .insert({ name } as any)
+    .select()
     .single();
-  if (selectError) throw selectError;
+  if (error) throw error;
   return data as Category;
 }
 
