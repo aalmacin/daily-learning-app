@@ -265,7 +265,6 @@ export function TermDetailPage({ term, initialRefinements, initialChats, explain
               {term.priority}
             </span>
           </div>
-          <p className="text-sm leading-6 text-zinc-700 dark:text-zinc-300">{term.content}</p>
         </div>
 
         {/* Feynman Method */}
@@ -361,6 +360,10 @@ export function TermDetailPage({ term, initialRefinements, initialChats, explain
           {viewMode.type === 'form' && (
             <div className="space-y-3">
               <StepLabel n={2} label="Research" />
+              <div className="rounded-lg bg-zinc-50 dark:bg-zinc-900 p-4 space-y-1">
+                <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Definition</p>
+                <p className="text-sm leading-6 text-zinc-700 dark:text-zinc-300">{term.content}</p>
+              </div>
               <p className="text-xs text-zinc-500 dark:text-zinc-400">
                 Do your research now, then come back to explain the concept again. Ask questions below as you study.
               </p>
@@ -438,6 +441,10 @@ export function TermDetailPage({ term, initialRefinements, initialChats, explain
               {/* Step 2 — Research chat (always available) */}
               <div className="space-y-3">
                 <StepLabel n={2} label="Research" />
+                <div className="rounded-lg bg-zinc-50 dark:bg-zinc-900 p-4 space-y-1">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Definition</p>
+                  <p className="text-sm leading-6 text-zinc-700 dark:text-zinc-300">{term.content}</p>
+                </div>
                 {!isComplete(viewing) && (
                   <p className="text-xs text-zinc-500 dark:text-zinc-400">
                     Do your research now, then come back to explain the concept again. Ask questions below as you study.
