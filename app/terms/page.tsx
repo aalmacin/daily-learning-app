@@ -1,22 +1,51 @@
 import Link from 'next/link';
-import { getAllTerms, getAllCategories, getUserSettings } from '@/lib/db';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { getTermsPaginated, getAllCategories, getUserSettings } from '@/lib/db';
+import { getCurrentUser } from '@/lib/auth';
 import { TermsTable } from '@/components/TermsTable';
+import type { TermsQuery, Priority } from '@/lib/db';
+
+const PAGE_SIZE_OPTIONS = [10, 25, 50];
 
 export default async function TermsPage({
   searchParams,
 }: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  const { category } = await searchParams;
-  const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  const [terms, categories, settings] = await Promise.all([
-    getAllTerms(supabase),
-    getAllCategories(supabase),
-    user ? getUserSettings(supabase, user.id) : null,
+  const params = await searchParams;
+
+  const page = Math.max(1, Number(params.page) || 1);
+  const q = typeof params.q === 'string' ? params.q : '';
+  const rawCategory = params.category;
+  const categoryNames =
+    typeof rawCategory === 'string'
+      ? [rawCategory]
+      : Array.isArray(rawCategory)
+        ? rawCategory
+        : [];
+  const notion: TermsQuery['notion'] =
+    params.notion === 'added' || params.notion === 'pending' ? params.notion : 'all';
+  const sort: TermsQuery['sort'] =
+    params.sort === 'name' || params.sort === 'priority' ? params.sort : 'created_at';
+  const dir: TermsQuery['dir'] = params.dir === 'asc' ? 'asc' : 'desc';
+  const rawPriority = params.priority;
+  const priority: Priority | 'all' =
+    rawPriority === 'High' || rawPriority === 'Medium' || rawPriority === 'Low'
+      ? rawPriority
+      : 'all';
+  const rawDailyLearning = params.dailyLearning;
+  const dailyLearning: 'all' | 'done' | 'not-done' =
+    rawDailyLearning === 'done' || rawDailyLearning === 'not-done' ? rawDailyLearning : 'all';
+  const rawPageSize = Number(params.pageSize);
+  const pageSize = PAGE_SIZE_OPTIONS.includes(rawPageSize) ? rawPageSize : 10;
+
+  const user = await getCurrentUser();
+
+  const [{ terms, total }, categories, settings] = await Promise.all([
+    getTermsPaginated({ page, pageSize, q, categoryNames, notion, sort, dir, priority, dailyLearning }),
+    getAllCategories(),
+    user ? getUserSettings(user.id) : null,
   ]);
-  const initialCategory = typeof category === 'string' ? category : undefined;
+
   const notionConfigured = !!(settings?.notion_api_key && settings?.notion_database_id);
 
   return (
@@ -36,7 +65,21 @@ export default async function TermsPage({
           </div>
         )}
         <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50 mb-6">Terms</h1>
-        <TermsTable initialData={terms} initialCategories={categories} initialCategory={initialCategory} timezone={settings?.timezone ?? 'UTC'} />
+        <TermsTable
+          initialTerms={terms}
+          total={total}
+          allCategories={categories}
+          currentPage={page}
+          pageSize={pageSize}
+          currentQ={q}
+          currentCategories={categoryNames}
+          currentNotion={notion}
+          currentPriority={priority}
+          currentDailyLearning={dailyLearning}
+          currentSort={sort}
+          currentDir={dir}
+          timezone={settings?.timezone ?? 'UTC'}
+        />
       </div>
     </div>
   );

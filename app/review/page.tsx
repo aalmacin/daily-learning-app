@@ -1,17 +1,14 @@
 import { getUserSettings, getReviewItemsByMonth, getAvailableReviewMonths } from '@/lib/db';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { getCurrentUser } from '@/lib/auth';
 import { ReviewPage } from '@/components/ReviewPage';
 
 export default async function ReviewRoute() {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return null;
 
   const [settings, availableMonths] = await Promise.all([
-    getUserSettings(supabase, user.id),
-    getAvailableReviewMonths(supabase),
+    getUserSettings(user.id),
+    getAvailableReviewMonths(),
   ]);
 
   const now = new Date();
@@ -22,7 +19,7 @@ export default async function ReviewRoute() {
   const year = defaultMonth?.year ?? currentYear;
   const month = defaultMonth?.month ?? currentMonth;
 
-  const initialData = availableMonths.length > 0 ? await getReviewItemsByMonth(supabase, year, month) : [];
+  const initialData = availableMonths.length > 0 ? await getReviewItemsByMonth(year, month) : [];
 
   return (
     <div className="bg-zinc-50 dark:bg-black p-8">

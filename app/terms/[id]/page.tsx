@@ -1,6 +1,5 @@
 import { notFound } from 'next/navigation';
 import { getTermById, getRefinementsByTermId, getChatsByRefinementIds, getExplainedAtForTerm } from '@/lib/db';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { TermDetailPage } from '@/components/TermDetailPage';
 
 export default async function TermPage({ params }: { params: Promise<{ id: string }> }) {
@@ -8,13 +7,12 @@ export default async function TermPage({ params }: { params: Promise<{ id: strin
   const id = Number(idStr);
   if (isNaN(id)) notFound();
 
-  const supabase = await createSupabaseServerClient();
-  const [term, refinements] = await Promise.all([getTermById(supabase, id), getRefinementsByTermId(supabase, id)]);
+  const [term, refinements] = await Promise.all([getTermById(id), getRefinementsByTermId(id)]);
   if (!term) notFound();
 
   const [initialChats, explainedAt] = await Promise.all([
-    getChatsByRefinementIds(supabase, refinements.map((r) => r.id)),
-    getExplainedAtForTerm(supabase, id),
+    getChatsByRefinementIds(refinements.map((r) => r.id)),
+    getExplainedAtForTerm(id),
   ]);
 
   return <TermDetailPage term={term} initialRefinements={refinements} initialChats={initialChats} explainedAt={explainedAt} />;

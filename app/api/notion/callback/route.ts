@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  await upsertUserSettings(supabase, user.id, {
+  await upsertUserSettings(user.id, {
     notion_api_key: access_token,
     notion_database_id: null,
   });

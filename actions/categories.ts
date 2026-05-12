@@ -8,42 +8,38 @@ import {
   updateTermCategories as dbUpdateTermCategories,
   getUserSettings,
 } from '@/lib/db';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { getCurrentUser } from '@/lib/auth';
 import { updateNotionPageMetadata } from '@/lib/notion';
 import { revalidatePath } from 'next/cache';
 import type { Category, Term } from '@/lib/db';
 
 export async function fetchCategories(): Promise<Category[]> {
-  const supabase = await createSupabaseServerClient();
-  return getAllCategories(supabase);
+  return getAllCategories();
 }
 
 export async function addCategory(name: string): Promise<Category> {
   const trimmed = name.trim();
   if (!trimmed) throw new Error('Category name is required');
-  const supabase = await createSupabaseServerClient();
-  const category = await dbInsertCategory(supabase, trimmed);
+  const category = await dbInsertCategory(trimmed);
   revalidatePath('/categories');
   return category;
 }
 
 export async function removeCategory(id: number): Promise<void> {
-  const supabase = await createSupabaseServerClient();
-  await dbDeleteCategory(supabase, id);
+  await dbDeleteCategory(id);
   revalidatePath('/categories');
   revalidatePath('/terms');
 }
 
 export async function updateTermCategories(termId: number, categories: string[]): Promise<Term> {
-  const supabase = await createSupabaseServerClient();
-  const current = await getTermById(supabase, termId);
+  const current = await getTermById(termId);
   if (!current) throw new Error('Term not found');
-  const updated = await dbUpdateTermCategories(supabase, termId, categories);
+  const updated = await dbUpdateTermCategories(termId, categories);
   if (!updated) throw new Error('Term not found');
   if (updated.notion_page_id) {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getCurrentUser();
     if (user) {
-      const settings = await getUserSettings(supabase, user.id);
+      const settings = await getUserSettings(user.id);
       if (settings?.notion_api_key && settings?.notion_database_id) {
         try {
           await updateNotionPageMetadata(
@@ -53,7 +49,7 @@ export async function updateTermCategories(termId: number, categories: string[])
             updated.priority,
           );
         } catch (err) {
-          await dbUpdateTermCategories(supabase, termId, current.categories).catch(() => {});
+          await dbUpdateTermCategories(termId, current.categories).catch(() => {});
           throw err;
         }
       }

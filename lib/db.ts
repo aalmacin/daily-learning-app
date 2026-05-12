@@ -1,4 +1,5 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
+import { cache } from 'react';
 
 export type Priority = 'High' | 'Medium' | 'Low';
 
@@ -45,17 +46,45 @@ export type ConceptRefinement = {
   created_at: string;
 };
 
+export type TermsQuery = {
+  page: number;
+  pageSize: number;
+  q?: string;
+  categoryNames?: string[];
+  notion?: 'pending' | 'added' | 'all';
+  priority?: Priority | 'all';
+  dailyLearning?: 'all' | 'done' | 'not-done';
+  sort?: 'created_at' | 'name' | 'priority';
+  dir?: 'asc' | 'desc';
+};
+
+export type TermsPage = {
+  terms: Term[];
+  total: number;
+};
+
 type TermRow = Omit<Term, 'categories' | 'explained'>;
 
-async function getCategoriesForTerm(supabase: SupabaseClient, termId: number): Promise<string[]> {
-  const { data: links, error } = await supabase
+let _supabase: ReturnType<typeof createClient> | null = null;
+
+function getSupabase(): ReturnType<typeof createClient> {
+  if (_supabase) return _supabase;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) throw new Error('Missing Supabase env vars');
+  _supabase = createClient(url, key);
+  return _supabase;
+}
+
+async function getCategoriesForTerm(termId: number): Promise<string[]> {
+  const { data, error } = await getSupabase()
     .from('term_categories')
     .select('category_id')
     .eq('term_id', termId);
   if (error) throw error;
-  if (!links || links.length === 0) return [];
-  const ids = (links as { category_id: number }[]).map((r) => r.category_id);
-  const { data: cats, error: catsError } = await supabase
+  if (!data || data.length === 0) return [];
+  const ids = (data as { category_id: number }[]).map((r) => r.category_id);
+  const { data: cats, error: catsError } = await getSupabase()
     .from('categories')
     .select('name')
     .in('id', ids)
@@ -64,39 +93,48 @@ async function getCategoriesForTerm(supabase: SupabaseClient, termId: number): P
   return (cats as { name: string }[]).map((c) => c.name);
 }
 
-async function upsertCategories(supabase: SupabaseClient, names: string[]): Promise<number[]> {
+async function upsertCategories(names: string[]): Promise<number[]> {
   if (names.length === 0) return [];
-  const { error } = await supabase
-    .from('categories')
-    .upsert(names.map((name) => ({ name })), { onConflict: 'name,user_id', ignoreDuplicates: true });
-  if (error) throw error;
-  const { data, error: selectError } = await supabase
+  const { data: existing, error: selectError } = await getSupabase()
     .from('categories')
     .select('id, name')
     .in('name', names);
   if (selectError) throw selectError;
-  return (data as Category[]).map((c) => c.id);
+
+  const existingMap = new Map((existing as Category[]).map((c) => [c.name, c.id]));
+  const missing = names.filter((n) => !existingMap.has(n));
+
+  if (missing.length > 0) {
+    const { data: inserted, error: insertError } = await getSupabase()
+      .from('categories')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .insert(missing.map((name) => ({ name })) as any)
+      .select('id, name');
+    if (insertError) throw insertError;
+    for (const cat of inserted as Category[]) {
+      existingMap.set(cat.name, cat.id);
+    }
+  }
+
+  return names.map((n) => existingMap.get(n)).filter((id): id is number => id !== undefined);
 }
 
-async function setTermCategories(
-  supabase: SupabaseClient,
-  termId: number,
-  categoryIds: number[],
-): Promise<void> {
-  const { error: deleteError } = await supabase
+async function setTermCategories(termId: number, categoryIds: number[]): Promise<void> {
+  const { error: deleteError } = await getSupabase()
     .from('term_categories')
     .delete()
     .eq('term_id', termId);
   if (deleteError) throw deleteError;
   if (categoryIds.length === 0) return;
-  const { error } = await supabase
+  const { error } = await getSupabase()
     .from('term_categories')
-    .insert(categoryIds.map((category_id) => ({ term_id: termId, category_id })));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .insert(categoryIds.map((category_id) => ({ term_id: termId, category_id })) as any);
   if (error) throw error;
 }
 
-async function isTermExplained(supabase: SupabaseClient, termId: number): Promise<boolean> {
-  const { data, error } = await supabase
+async function isTermExplained(termId: number): Promise<boolean> {
+  const { data, error } = await getSupabase()
     .from('concept_refinements')
     .select('id')
     .eq('term_id', termId)
@@ -106,14 +144,98 @@ async function isTermExplained(supabase: SupabaseClient, termId: number): Promis
   return (data?.length ?? 0) > 0;
 }
 
-export async function getAllCategories(supabase: SupabaseClient): Promise<Category[]> {
-  const { data, error } = await supabase.from('categories').select('*').order('name');
+export async function getTermsPaginated({
+  page,
+  pageSize,
+  q,
+  categoryNames,
+  notion,
+  priority,
+  dailyLearning,
+  sort = 'created_at',
+  dir = 'desc',
+}: TermsQuery): Promise<TermsPage> {
+  const offset = (page - 1) * pageSize;
+
+  // Resolve category names → term IDs (OR logic)
+  let termIdFilter: number[] | null = null;
+  if (categoryNames && categoryNames.length > 0) {
+    const { data: cats, error: catError } = await getSupabase()
+      .from('categories')
+      .select('id')
+      .in('name', categoryNames);
+    if (catError) throw catError;
+    const catIds = (cats as { id: number }[]).map((c) => c.id);
+    if (catIds.length === 0) return { terms: [], total: 0 };
+
+    const { data: links, error: linkError } = await getSupabase()
+      .from('term_categories')
+      .select('term_id')
+      .in('category_id', catIds);
+    if (linkError) throw linkError;
+    termIdFilter = [...new Set((links as { term_id: number }[]).map((l) => l.term_id))];
+    if (termIdFilter.length === 0) return { terms: [], total: 0 };
+  }
+
+  let query = getSupabase().from('terms').select('*', { count: 'exact' });
+  if (q) query = query.ilike('name', `%${q}%`);
+  if (notion === 'pending') query = query.is('notion_page_id', null);
+  if (notion === 'added') query = query.not('notion_page_id', 'is', null);
+  if (priority && priority !== 'all') query = query.eq('priority', priority);
+  if (dailyLearning === 'done') query = query.eq('daily_learning_done', true);
+  if (dailyLearning === 'not-done') query = query.eq('daily_learning_done', false);
+  if (termIdFilter !== null) query = query.in('id', termIdFilter);
+  query = query.order(sort, { ascending: dir === 'asc' }).range(offset, offset + pageSize - 1);
+
+  const { data: rows, count, error } = await query;
   if (error) throw error;
-  return data as Category[];
+
+  const total = count ?? 0;
+  if (!rows || rows.length === 0) return { terms: [], total };
+
+  const rowIds = (rows as TermRow[]).map((r) => r.id);
+
+  const [catLinksResult, explainedResult] = await Promise.all([
+    getSupabase()
+      .from('term_categories')
+      .select('term_id, categories(name)')
+      .in('term_id', rowIds),
+    getSupabase()
+      .from('concept_refinements')
+      .select('term_id')
+      .in('term_id', rowIds)
+      .not('refinement_formatted_note', 'is', null),
+  ]);
+  if (catLinksResult.error) throw catLinksResult.error;
+  if (explainedResult.error) throw explainedResult.error;
+
+  const catMap = new Map<number, string[]>();
+  for (const link of catLinksResult.data as unknown as { term_id: number; categories: { name: string } | null }[]) {
+    if (!link.categories) continue;
+    if (!catMap.has(link.term_id)) catMap.set(link.term_id, []);
+    catMap.get(link.term_id)!.push(link.categories.name);
+  }
+
+  const explainedIds = new Set((explainedResult.data as { term_id: number }[]).map((r) => r.term_id));
+
+  return {
+    terms: (rows as TermRow[]).map((row) => ({
+      ...row,
+      categories: catMap.get(row.id) ?? [],
+      explained: explainedIds.has(row.id),
+    })),
+    total,
+  };
 }
 
-export async function getTerm(supabase: SupabaseClient, name: string): Promise<Term | null> {
-  const { data, error } = await supabase
+export const getAllCategories = cache(async (): Promise<Category[]> => {
+  const { data, error } = await getSupabase().from('categories').select('*').order('name');
+  if (error) throw error;
+  return data as Category[];
+});
+
+export async function getTerm(name: string): Promise<Term | null> {
+  const { data, error } = await getSupabase()
     .from('terms')
     .select('*')
     .ilike('name', name)
@@ -122,59 +244,37 @@ export async function getTerm(supabase: SupabaseClient, name: string): Promise<T
   if (!data) return null;
   const row = data as TermRow;
   const [categories, explained] = await Promise.all([
-    getCategoriesForTerm(supabase, row.id),
-    isTermExplained(supabase, row.id),
+    getCategoriesForTerm(row.id),
+    isTermExplained(row.id),
   ]);
   return { ...row, categories, explained };
 }
 
-export async function getAllTerms(supabase: SupabaseClient): Promise<Term[]> {
-  const { data: rows, error } = await supabase
+export async function getAllTerms(): Promise<Term[]> {
+  const { data: rows, error } = await getSupabase()
     .from('terms')
     .select('*')
     .order('created_at', { ascending: false });
   if (error) throw error;
 
-  const termIds = (rows as TermRow[]).map((row) => row.id);
+  const [catLinksResult, explainedResult] = await Promise.all([
+    getSupabase().from('term_categories').select('term_id, categories(name)'),
+    getSupabase()
+      .from('concept_refinements')
+      .select('term_id')
+      .not('refinement_formatted_note', 'is', null),
+  ]);
+  if (catLinksResult.error) throw catLinksResult.error;
+  if (explainedResult.error) throw explainedResult.error;
+
   const catMap = new Map<number, string[]>();
-
-  if (termIds.length > 0) {
-    // Batch by termIds to avoid the PostgREST default row limit (1000)
-    const BATCH_SIZE = 200;
-    const allCatLinks: { term_id: number; category_id: number }[] = [];
-    for (let i = 0; i < termIds.length; i += BATCH_SIZE) {
-      const batch = termIds.slice(i, i + BATCH_SIZE);
-      const { data, error: batchError } = await supabase
-        .from('term_categories')
-        .select('term_id, category_id')
-        .in('term_id', batch);
-      if (batchError) throw batchError;
-      if (data) allCatLinks.push(...(data as { term_id: number; category_id: number }[]));
-    }
-
-    if (allCatLinks.length > 0) {
-      const categoryIds = [...new Set(allCatLinks.map((l) => l.category_id))];
-      const { data: cats, error: catsError } = await supabase
-        .from('categories')
-        .select('id, name')
-        .in('id', categoryIds);
-      if (catsError) throw catsError;
-      const catNameById = new Map((cats as { id: number; name: string }[]).map((c) => [c.id, c.name]));
-      for (const link of allCatLinks) {
-        const name = catNameById.get(link.category_id);
-        if (!name) continue;
-        if (!catMap.has(link.term_id)) catMap.set(link.term_id, []);
-        catMap.get(link.term_id)!.push(name);
-      }
-    }
+  for (const link of catLinksResult.data as unknown as { term_id: number; categories: { name: string } | null }[]) {
+    if (!link.categories) continue;
+    if (!catMap.has(link.term_id)) catMap.set(link.term_id, []);
+    catMap.get(link.term_id)!.push(link.categories.name);
   }
 
-  const { data: explained, error: explainedError } = await supabase
-    .from('concept_refinements')
-    .select('term_id')
-    .not('refinement_formatted_note', 'is', null);
-  if (explainedError) throw explainedError;
-  const explainedIds = new Set((explained as { term_id: number }[]).map((r) => r.term_id));
+  const explainedIds = new Set((explainedResult.data as { term_id: number }[]).map((r) => r.term_id));
 
   return (rows as TermRow[]).map((row) => ({
     ...row,
@@ -183,29 +283,26 @@ export async function getAllTerms(supabase: SupabaseClient): Promise<Term[]> {
   }));
 }
 
-export async function insertTerm(
-  supabase: SupabaseClient,
-  term: Omit<Term, 'id' | 'created_at' | 'updated_at' | 'notion_last_edited' | 'last_synced_at' | 'explained' | 'daily_learning_done' | 'notion_date'>,
-): Promise<Term> {
-  const { data, error } = await supabase
+export async function insertTerm(term: Omit<Term, 'id' | 'created_at' | 'explained'>): Promise<Term> {
+  const { data, error } = await getSupabase()
     .from('terms')
     .insert({
       name: term.name,
       content: term.content,
       notion_page_id: term.notion_page_id ?? null,
       priority: term.priority ?? 'Medium',
-    })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any)
     .select()
     .single();
   if (error) throw error;
   const row = data as TermRow;
-  const categoryIds = await upsertCategories(supabase, term.categories);
-  await setTermCategories(supabase, row.id, categoryIds);
+  const categoryIds = await upsertCategories(term.categories);
+  await setTermCategories(row.id, categoryIds);
   return { ...row, categories: term.categories, explained: false };
 }
 
 export async function updateTerm(
-  supabase: SupabaseClient,
   id: number,
   updates: Partial<Omit<Term, 'id' | 'created_at' | 'updated_at' | 'notion_last_edited' | 'last_synced_at' | 'explained' | 'daily_learning_done' | 'notion_date'>>,
 ): Promise<Term | null> {
@@ -217,9 +314,9 @@ export async function updateTerm(
 
   let row: TermRow;
   if (Object.keys(fields).length > 0) {
-    const { data, error } = await supabase
+    const { data, error } = await getSupabase()
       .from('terms')
-      .update(fields)
+      .update(fields as unknown as never)
       .eq('id', id)
       .select()
       .maybeSingle();
@@ -227,7 +324,7 @@ export async function updateTerm(
     if (!data) return null;
     row = data as TermRow;
   } else {
-    const { data, error } = await supabase
+    const { data, error } = await getSupabase()
       .from('terms')
       .select('*')
       .eq('id', id)
@@ -238,51 +335,53 @@ export async function updateTerm(
   }
 
   if (updates.categories !== undefined) {
-    const categoryIds = await upsertCategories(supabase, updates.categories);
-    await setTermCategories(supabase, row.id, categoryIds);
+    const categoryIds = await upsertCategories(updates.categories);
+    await setTermCategories(row.id, categoryIds);
   }
 
   const [categories, explained] = await Promise.all([
-    getCategoriesForTerm(supabase, row.id),
-    isTermExplained(supabase, row.id),
+    getCategoriesForTerm(row.id),
+    isTermExplained(row.id),
   ]);
   return { ...row, categories, explained };
 }
 
-export async function deleteTerm(supabase: SupabaseClient, id: number): Promise<void> {
-  const { error } = await supabase.from('terms').delete().eq('id', id);
+export async function deleteTerm(id: number): Promise<void> {
+  const { error } = await getSupabase().from('terms').delete().eq('id', id);
   if (error) throw error;
 }
 
-export async function insertCategory(supabase: SupabaseClient, name: string): Promise<Category> {
-  const { error } = await supabase
-    .from('categories')
-    .upsert({ name }, { onConflict: 'name,user_id', ignoreDuplicates: true });
-  if (error) throw error;
-  const { data, error: selectError } = await supabase
+export async function insertCategory(name: string): Promise<Category> {
+  const { data: existing } = await getSupabase()
     .from('categories')
     .select('*')
     .eq('name', name)
+    .maybeSingle();
+  if (existing) return existing as Category;
+  const { data, error } = await getSupabase()
+    .from('categories')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .insert({ name } as any)
+    .select()
     .single();
-  if (selectError) throw selectError;
+  if (error) throw error;
   return data as Category;
 }
 
-export async function deleteCategory(supabase: SupabaseClient, id: number): Promise<void> {
-  const { error } = await supabase.from('categories').delete().eq('id', id);
+export async function deleteCategory(id: number): Promise<void> {
+  const { error } = await getSupabase().from('categories').delete().eq('id', id);
   if (error) throw error;
 }
 
 export async function updateTermCategories(
-  supabase: SupabaseClient,
   termId: number,
   categories: string[],
 ): Promise<Term | null> {
-  return updateTerm(supabase, termId, { categories });
+  return updateTerm(termId, { categories });
 }
 
-export async function getTermById(supabase: SupabaseClient, id: number): Promise<Term | null> {
-  const { data, error } = await supabase
+export const getTermById = cache(async (id: number): Promise<Term | null> => {
+  const { data, error } = await getSupabase()
     .from('terms')
     .select('*')
     .eq('id', id)
@@ -291,30 +390,24 @@ export async function getTermById(supabase: SupabaseClient, id: number): Promise
   if (!data) return null;
   const row = data as TermRow;
   const [categories, explained] = await Promise.all([
-    getCategoriesForTerm(supabase, row.id),
-    isTermExplained(supabase, row.id),
+    getCategoriesForTerm(row.id),
+    isTermExplained(row.id),
   ]);
   return { ...row, categories, explained };
-}
+});
 
-export async function getRefinementsByTermId(
-  supabase: SupabaseClient,
-  termId: number,
-): Promise<ConceptRefinement[]> {
-  const { data, error } = await supabase
+export const getRefinementsByTermId = cache(async (termId: number): Promise<ConceptRefinement[]> => {
+  const { data, error } = await getSupabase()
     .from('concept_refinements')
     .select('*')
     .eq('term_id', termId)
     .order('created_at', { ascending: false });
   if (error) throw error;
   return data as ConceptRefinement[];
-}
+});
 
-export async function getRefinementById(
-  supabase: SupabaseClient,
-  id: number,
-): Promise<ConceptRefinement | null> {
-  const { data, error } = await supabase
+export async function getRefinementById(id: number): Promise<ConceptRefinement | null> {
+  const { data, error } = await getSupabase()
     .from('concept_refinements')
     .select('*')
     .eq('id', id)
@@ -323,14 +416,11 @@ export async function getRefinementById(
   return (data as ConceptRefinement | null) ?? null;
 }
 
-export async function createRefinement(
-  supabase: SupabaseClient,
-  termId: number,
-  preRefinement: string,
-): Promise<ConceptRefinement> {
-  const { data, error } = await supabase
+export async function createRefinement(termId: number, preRefinement: string): Promise<ConceptRefinement> {
+  const { data, error } = await getSupabase()
     .from('concept_refinements')
-    .insert({ term_id: termId, pre_refinement: preRefinement })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .insert({ term_id: termId, pre_refinement: preRefinement } as any)
     .select()
     .single();
   if (error) throw error;
@@ -338,14 +428,13 @@ export async function createRefinement(
 }
 
 export async function updatePreRefinementResult(
-  supabase: SupabaseClient,
   id: number,
   accuracy: number,
   review: string,
 ): Promise<ConceptRefinement> {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('concept_refinements')
-    .update({ pre_refinement_accuracy: accuracy, pre_refinement_review: review })
+    .update({ pre_refinement_accuracy: accuracy, pre_refinement_review: review } as unknown as never)
     .eq('id', id)
     .select()
     .single();
@@ -354,15 +443,14 @@ export async function updatePreRefinementResult(
 }
 
 export async function setPreRefinement(
-  supabase: SupabaseClient,
   id: number,
   preRefinement: string,
   accuracy: number,
   review: string,
 ): Promise<ConceptRefinement> {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('concept_refinements')
-    .update({ pre_refinement: preRefinement, pre_refinement_accuracy: accuracy, pre_refinement_review: review })
+    .update({ pre_refinement: preRefinement, pre_refinement_accuracy: accuracy, pre_refinement_review: review } as unknown as never)
     .eq('id', id)
     .select()
     .single();
@@ -371,7 +459,6 @@ export async function setPreRefinement(
 }
 
 export async function updateRefinementData(
-  supabase: SupabaseClient,
   id: number,
   data: {
     refinement: string;
@@ -381,9 +468,9 @@ export async function updateRefinementData(
     refinement_additional_note: string;
   },
 ): Promise<ConceptRefinement> {
-  const { data: updated, error } = await supabase
+  const { data: updated, error } = await getSupabase()
     .from('concept_refinements')
-    .update(data)
+    .update(data as unknown as never)
     .eq('id', id)
     .select()
     .single();
@@ -391,11 +478,8 @@ export async function updateRefinementData(
   return updated as ConceptRefinement;
 }
 
-export async function deleteConceptRefinement(
-  supabase: SupabaseClient,
-  id: number,
-): Promise<void> {
-  const { error } = await supabase.from('concept_refinements').delete().eq('id', id);
+export async function deleteConceptRefinement(id: number): Promise<void> {
+  const { error } = await getSupabase().from('concept_refinements').delete().eq('id', id);
   if (error) throw error;
 }
 
@@ -407,11 +491,8 @@ export type ChatMessage = {
   created_at: string;
 };
 
-export async function getChatsByRefinementId(
-  supabase: SupabaseClient,
-  refinementId: number,
-): Promise<ChatMessage[]> {
-  const { data, error } = await supabase
+export async function getChatsByRefinementId(refinementId: number): Promise<ChatMessage[]> {
+  const { data, error } = await getSupabase()
     .from('research_chats')
     .select('*')
     .eq('refinement_id', refinementId)
@@ -420,12 +501,9 @@ export async function getChatsByRefinementId(
   return data as ChatMessage[];
 }
 
-export async function getChatsByRefinementIds(
-  supabase: SupabaseClient,
-  refinementIds: number[],
-): Promise<Record<number, ChatMessage[]>> {
+export async function getChatsByRefinementIds(refinementIds: number[]): Promise<Record<number, ChatMessage[]>> {
   if (refinementIds.length === 0) return {};
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('research_chats')
     .select('*')
     .in('refinement_id', refinementIds)
@@ -440,22 +518,18 @@ export async function getChatsByRefinementIds(
 }
 
 export async function insertChatMessages(
-  supabase: SupabaseClient,
   messages: Array<{ refinement_id: number; role: 'user' | 'assistant'; content: string }>,
 ): Promise<ChatMessage[]> {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('research_chats')
-    .insert(messages)
+    .insert(messages as unknown as never)
     .select();
   if (error) throw error;
   return data as ChatMessage[];
 }
 
-export async function getUserSettings(
-  supabase: SupabaseClient,
-  userId: string,
-): Promise<UserSettings | null> {
-  const { data, error } = await supabase
+export async function getUserSettings(userId: string): Promise<UserSettings | null> {
+  const { data, error } = await getSupabase()
     .from('user_settings')
     .select('*')
     .eq('user_id', userId)
@@ -465,80 +539,63 @@ export async function getUserSettings(
 }
 
 export async function upsertUserSettings(
-  supabase: SupabaseClient,
   userId: string,
   settings: { notion_api_key: string | null; notion_database_id: string | null },
 ): Promise<UserSettings> {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('user_settings')
-    .upsert({ user_id: userId, ...settings, updated_at: new Date().toISOString() })
+    .upsert({ user_id: userId, ...settings, updated_at: new Date().toISOString() } as unknown as never)
     .select()
     .single();
   if (error) throw error;
   return data as UserSettings;
 }
 
-export async function updateNotionDatabaseId(
-  supabase: SupabaseClient,
-  userId: string,
-  databaseId: string,
-): Promise<void> {
-  const { error } = await supabase
+export async function updateNotionDatabaseId(userId: string, databaseId: string): Promise<void> {
+  const { error } = await getSupabase()
     .from('user_settings')
-    .update({ notion_database_id: databaseId, updated_at: new Date().toISOString() })
+    .update({ notion_database_id: databaseId, updated_at: new Date().toISOString() } as unknown as never)
     .eq('user_id', userId);
   if (error) throw error;
 }
 
-export async function updateTimezone(
-  supabase: SupabaseClient,
-  userId: string,
-  timezone: string,
-): Promise<void> {
-  const { error } = await supabase
+export async function updateTimezone(userId: string, timezone: string): Promise<void> {
+  const { error } = await getSupabase()
     .from('user_settings')
-    .upsert({ user_id: userId, timezone, updated_at: new Date().toISOString() });
+    .upsert({ user_id: userId, timezone, updated_at: new Date().toISOString() } as unknown as never);
   if (error) throw error;
 }
 
-export async function clearNotionCredentials(
-  supabase: SupabaseClient,
-  userId: string,
-): Promise<void> {
-  const { error } = await supabase
+export async function clearNotionCredentials(userId: string): Promise<void> {
+  const { error } = await getSupabase()
     .from('user_settings')
-    .update({ notion_api_key: null, notion_database_id: null, updated_at: new Date().toISOString() })
+    .update({ notion_api_key: null, notion_database_id: null, updated_at: new Date().toISOString() } as unknown as never)
     .eq('user_id', userId);
   if (error) throw error;
 }
 
-export async function setTermNotionDate(
-  supabase: SupabaseClient,
-  termId: number,
-  date: string,
-): Promise<void> {
-  const { error } = await supabase
+export async function setTermNotionDate(termId: number, date: string): Promise<void> {
+  const { error } = await getSupabase()
     .from('terms')
-    .update({ notion_date: date })
+    .update({ notion_date: date } as unknown as never)
     .eq('id', termId);
   if (error) throw error;
 }
 
 export async function markTermSynced(
-  supabase: SupabaseClient,
   termId: number,
   notionLastEdited: string,
   dailyLearningDone: boolean,
   notionDate: string | null,
 ): Promise<void> {
-  const { error } = await supabase
+  const { error } = await getSupabase()
     .from('terms')
     .update({
       notion_last_edited: notionLastEdited,
       last_synced_at: new Date().toISOString(),
       daily_learning_done: dailyLearningDone,
       notion_date: notionDate,
-    })
+    } as unknown as never)
     .eq('id', termId);
   if (error) throw error;
 }
@@ -551,11 +608,8 @@ export type ReviewItem = {
   categories: string[];
 };
 
-export async function getExplainedAtForTerm(
-  supabase: SupabaseClient,
-  termId: number,
-): Promise<string | null> {
-  const { data } = await supabase
+export async function getExplainedAtForTerm(termId: number): Promise<string | null> {
+  const { data } = await getSupabase()
     .from('term_explained_content')
     .select('explained_at')
     .eq('term_id', termId)
@@ -565,11 +619,10 @@ export async function getExplainedAtForTerm(
 }
 
 export async function getExplainedContent(
-  supabase: SupabaseClient,
   termIds: number[],
 ): Promise<{ term_id: number; id: number; explained_at: string; notion_last_edited: string | null }[]> {
   if (termIds.length === 0) return [];
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('term_explained_content')
     .select('id, term_id, explained_at, notion_last_edited')
     .in('term_id', termIds);
@@ -578,44 +631,38 @@ export async function getExplainedContent(
 }
 
 export async function updateExplainedContent(
-  supabase: SupabaseClient,
   id: number,
   notionContent: string,
   explainedAt: string,
   notionLastEdited: string,
 ): Promise<void> {
-  const { error } = await supabase
+  const { error } = await getSupabase()
     .from('term_explained_content')
-    .update({ notion_content: notionContent, explained_at: explainedAt, notion_last_edited: notionLastEdited })
+    .update({ notion_content: notionContent, explained_at: explainedAt, notion_last_edited: notionLastEdited } as unknown as never)
     .eq('id', id);
   if (error) throw error;
 }
 
 export async function insertExplainedContent(
-  supabase: SupabaseClient,
   termId: number,
   notionContent: string,
   explainedAt: string,
   notionLastEdited: string,
 ): Promise<void> {
-  const { error } = await supabase
+  const { error } = await getSupabase()
     .from('term_explained_content')
-    .insert({ term_id: termId, notion_content: notionContent, explained_at: explainedAt, notion_last_edited: notionLastEdited });
+    .insert({ term_id: termId, notion_content: notionContent, explained_at: explainedAt, notion_last_edited: notionLastEdited } as unknown as never);
   if (error) throw error;
 }
 
-export async function getReviewItemsByMonth(
-  supabase: SupabaseClient,
-  year: number,
-  month: number,
-): Promise<ReviewItem[]> {
+export async function getReviewItemsByMonth(year: number, month: number): Promise<ReviewItem[]> {
   const pad = (n: number) => String(n).padStart(2, '0');
   const startDate = `${year}-${pad(month)}-01`;
   const nextMonth = month === 12 ? 1 : month + 1;
   const nextYear = month === 12 ? year + 1 : year;
   const endDate = `${nextYear}-${pad(nextMonth)}-01`;
 
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('terms')
     .select('id, name, notion_date, term_explained_content(notion_content)')
     .eq('daily_learning_done', true)
@@ -636,7 +683,7 @@ export async function getReviewItemsByMonth(
   const catMap = new Map<number, string[]>();
 
   if (termIds.length > 0) {
-    const { data: catLinks, error: catError } = await supabase
+    const { data: catLinks, error: catError } = await getSupabase()
       .from('term_categories')
       .select('term_id, category_id')
       .in('term_id', termIds);
@@ -645,7 +692,7 @@ export async function getReviewItemsByMonth(
     if (catLinks && catLinks.length > 0) {
       const typedLinks = catLinks as { term_id: number; category_id: number }[];
       const categoryIds = [...new Set(typedLinks.map((l) => l.category_id))];
-      const { data: cats, error: catsError } = await supabase
+      const { data: cats, error: catsError } = await getSupabase()
         .from('categories')
         .select('id, name')
         .in('id', categoryIds);
@@ -669,10 +716,8 @@ export async function getReviewItemsByMonth(
   }));
 }
 
-export async function getAvailableReviewMonths(
-  supabase: SupabaseClient,
-): Promise<{ year: number; month: number }[]> {
-  const { data, error } = await supabase
+export async function getAvailableReviewMonths(): Promise<{ year: number; month: number }[]> {
+  const { data, error } = await getSupabase()
     .from('terms')
     .select('notion_date')
     .eq('daily_learning_done', true)
