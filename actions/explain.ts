@@ -31,6 +31,9 @@ export async function explainTerm(rawName: string, context?: string): Promise<Ex
   const categoryNames = dbCategories.map((c) => c.name);
   const explanation = await explainTermWithAI(name, categoryNames, context);
 
+  const user = await getCurrentUser();
+  if (!user) throw new Error('Not authenticated');
+
   let term: Term;
   try {
     term = await insertTerm({
@@ -44,7 +47,7 @@ export async function explainTerm(rawName: string, context?: string): Promise<Ex
       last_synced_at: null,
       daily_learning_done: false,
       notion_date: null,
-    });
+    }, user.id);
   } catch (err) {
     if (isDuplicateKeyError(err)) {
       const existing = await getTerm(name);
@@ -52,8 +55,6 @@ export async function explainTerm(rawName: string, context?: string): Promise<Ex
     }
     throw err;
   }
-
-  const user = await getCurrentUser();
   if (user) {
     const settings = await getUserSettings(user.id);
     if (settings?.notion_api_key && settings?.notion_database_id) {

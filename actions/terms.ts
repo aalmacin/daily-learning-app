@@ -58,14 +58,15 @@ export async function fetchAllTerms(): Promise<Term[]> {
 }
 
 export async function regenerateTerm(id: number, name: string, context?: string): Promise<Term> {
-  const { credentials } = await getNotionCredentials();
+  const [{ credentials }, user] = await Promise.all([getNotionCredentials(), getCurrentUser()]);
+  if (!user) throw new Error('Not authenticated');
   const dbCategories = await getAllCategories();
   const categoryNames = dbCategories.map((c) => c.name);
   const explanation = await explainTermWithAI(name, categoryNames, context);
   const updated = await updateTerm(id, {
     content: explanation.content,
     categories: explanation.categories,
-  });
+  }, user.id);
 
   if (!updated) throw new Error('Term not found');
 
