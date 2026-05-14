@@ -54,13 +54,15 @@ export async function updateTermPriority(id: number, priority: Priority): Promis
 }
 
 export async function fetchAllTerms(): Promise<Term[]> {
-  return getAllTerms();
+  const user = await getCurrentUser();
+  if (!user) throw new Error('Not authenticated');
+  return getAllTerms(user.id);
 }
 
 export async function regenerateTerm(id: number, name: string, context?: string): Promise<Term> {
   const [{ credentials }, user] = await Promise.all([getNotionCredentials(), getCurrentUser()]);
   if (!user) throw new Error('Not authenticated');
-  const dbCategories = await getAllCategories();
+  const dbCategories = await getAllCategories(user.id);
   const categoryNames = dbCategories.map((c) => c.name);
   const explanation = await explainTermWithAI(name, categoryNames, context);
   const updated = await updateTerm(id, {

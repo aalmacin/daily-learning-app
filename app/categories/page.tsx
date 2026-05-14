@@ -1,11 +1,13 @@
 import Link from 'next/link';
 import { connection } from 'next/server';
 import { getAllCategories } from '@/lib/db';
+import { getCurrentUser } from '@/lib/auth';
 import { CategoriesManager } from '@/components/CategoriesManager';
 
 export default async function CategoriesPage() {
   await connection();
-  const categories = await getAllCategories();
+  const user = await getCurrentUser();
+  const categories = await getAllCategories(user!.id);
 
   return (
     <div className="bg-zinc-50 dark:bg-black p-8">

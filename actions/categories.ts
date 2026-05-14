@@ -14,7 +14,9 @@ import { revalidatePath } from 'next/cache';
 import type { Category, Term } from '@/lib/db';
 
 export async function fetchCategories(): Promise<Category[]> {
-  return getAllCategories();
+  const user = await getCurrentUser();
+  if (!user) throw new Error('Not authenticated');
+  return getAllCategories(user.id);
 }
 
 export async function addCategory(name: string): Promise<Category> {
