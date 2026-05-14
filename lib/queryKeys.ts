@@ -6,4 +6,7 @@ export const queryKeys = {
   categories: {
     all: () => ['categories'] as const,
   },
+  termList: {
+    all: () => ['termList'] as const,
+  },
 }
