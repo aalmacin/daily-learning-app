@@ -47,6 +47,7 @@ export type ConceptRefinement = {
 };
 
 export type TermsQuery = {
+  userId: string;
   page: number;
   pageSize: number;
   q?: string;
@@ -146,6 +147,7 @@ async function isTermExplained(termId: number): Promise<boolean> {
 }
 
 export async function getTermsPaginated({
+  userId,
   page,
   pageSize,
   q,
@@ -164,7 +166,8 @@ export async function getTermsPaginated({
     const { data: cats, error: catError } = await getSupabase()
       .from('categories')
       .select('id')
-      .in('name', categoryNames);
+      .in('name', categoryNames)
+      .eq('user_id', userId);
     if (catError) throw catError;
     const catIds = (cats as { id: number }[]).map((c) => c.id);
     if (catIds.length === 0) return { terms: [], total: 0 };
@@ -178,7 +181,7 @@ export async function getTermsPaginated({
     if (termIdFilter.length === 0) return { terms: [], total: 0 };
   }
 
-  let query = getSupabase().from('terms').select('*', { count: 'exact' });
+  let query = getSupabase().from('terms').select('*', { count: 'exact' }).eq('user_id', userId);
   if (q) query = query.ilike('name', `%${q}%`);
   if (notion === 'pending') query = query.is('notion_page_id', null);
   if (notion === 'added') query = query.not('notion_page_id', 'is', null);
@@ -229,17 +232,18 @@ export async function getTermsPaginated({
   };
 }
 
-export const getAllCategories = cache(async (): Promise<Category[]> => {
-  const { data, error } = await getSupabase().from('categories').select('*').order('name');
+export const getAllCategories = cache(async (userId: string): Promise<Category[]> => {
+  const { data, error } = await getSupabase().from('categories').select('*').eq('user_id', userId).order('name');
   if (error) throw error;
   return data as Category[];
 });
 
-export async function getTerm(name: string): Promise<Term | null> {
+export async function getTerm(name: string, userId: string): Promise<Term | null> {
   const { data, error } = await getSupabase()
     .from('terms')
     .select('*')
     .ilike('name', name)
+    .eq('user_id', userId)
     .maybeSingle();
   if (error) throw error;
   if (!data) return null;
@@ -251,10 +255,11 @@ export async function getTerm(name: string): Promise<Term | null> {
   return { ...row, categories, explained };
 }
 
-export async function getAllTerms(): Promise<Term[]> {
+export async function getAllTerms(userId: string): Promise<Term[]> {
   const { data: rows, error } = await getSupabase()
     .from('terms')
     .select('*')
+    .eq('user_id', userId)
     .order('created_at', { ascending: false });
   if (error) throw error;
 
@@ -660,7 +665,7 @@ export async function insertExplainedContent(
   if (error) throw error;
 }
 
-export async function getReviewItemsByMonth(year: number, month: number): Promise<ReviewItem[]> {
+export async function getReviewItemsByMonth(year: number, month: number, userId: string): Promise<ReviewItem[]> {
   const pad = (n: number) => String(n).padStart(2, '0');
   const startDate = `${year}-${pad(month)}-01`;
   const nextMonth = month === 12 ? 1 : month + 1;
@@ -670,6 +675,7 @@ export async function getReviewItemsByMonth(year: number, month: number): Promis
   const { data, error } = await getSupabase()
     .from('terms')
     .select('id, name, notion_date, term_explained_content(notion_content)')
+    .eq('user_id', userId)
     .eq('daily_learning_done', true)
     .not('notion_date', 'is', null)
     .gte('notion_date', startDate)
@@ -721,10 +727,11 @@ export async function getReviewItemsByMonth(year: number, month: number): Promis
   }));
 }
 
-export async function getAvailableReviewMonths(): Promise<{ year: number; month: number }[]> {
+export async function getAvailableReviewMonths(userId: string): Promise<{ year: number; month: number }[]> {
   const { data, error } = await getSupabase()
     .from('terms')
     .select('notion_date')
+    .eq('user_id', userId)
     .eq('daily_learning_done', true)
     .not('notion_date', 'is', null)
     .order('notion_date', { ascending: false });

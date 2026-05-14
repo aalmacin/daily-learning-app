@@ -39,11 +39,12 @@ export default async function TermsPage({
   const pageSize = PAGE_SIZE_OPTIONS.includes(rawPageSize) ? rawPageSize : 10;
 
   const user = await getCurrentUser();
+  const userId = user!.id;
 
   const [{ terms, total }, categories, settings] = await Promise.all([
-    getTermsPaginated({ page, pageSize, q, categoryNames, notion, sort, dir, priority, dailyLearning }),
-    getAllCategories(),
-    user ? getUserSettings(user.id) : null,
+    getTermsPaginated({ userId, page, pageSize, q, categoryNames, notion, sort, dir, priority, dailyLearning }),
+    getAllCategories(userId),
+    getUserSettings(userId),
   ]);
 
   const notionConfigured = !!(settings?.notion_api_key && settings?.notion_database_id);

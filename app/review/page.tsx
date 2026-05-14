@@ -8,7 +8,7 @@ export default async function ReviewRoute() {
 
   const [settings, availableMonths] = await Promise.all([
     getUserSettings(user.id),
-    getAvailableReviewMonths(),
+    getAvailableReviewMonths(user.id),
   ]);
 
   const now = new Date();
@@ -19,7 +19,7 @@ export default async function ReviewRoute() {
   const year = defaultMonth?.year ?? currentYear;
   const month = defaultMonth?.month ?? currentMonth;
 
-  const initialData = availableMonths.length > 0 ? await getReviewItemsByMonth(year, month) : [];
+  const initialData = availableMonths.length > 0 ? await getReviewItemsByMonth(year, month, user.id) : [];
 
   return (
     <div className="bg-zinc-50 dark:bg-black p-8">

@@ -22,17 +22,17 @@ export async function explainTerm(rawName: string, context?: string): Promise<Ex
   const name = rawName.trim().toLowerCase();
   if (!name) throw new Error('Term name is required');
 
+  const user = await getCurrentUser();
+  if (!user) throw new Error('Not authenticated');
+
   if (!context) {
-    const cached = await getTerm(name);
+    const cached = await getTerm(name, user.id);
     if (cached) return { ...cached, alreadyExisted: true };
   }
 
-  const dbCategories = await getAllCategories();
+  const dbCategories = await getAllCategories(user.id);
   const categoryNames = dbCategories.map((c) => c.name);
   const explanation = await explainTermWithAI(name, categoryNames, context);
-
-  const user = await getCurrentUser();
-  if (!user) throw new Error('Not authenticated');
 
   let term: Term;
   try {
@@ -50,32 +50,30 @@ export async function explainTerm(rawName: string, context?: string): Promise<Ex
     }, user.id);
   } catch (err) {
     if (isDuplicateKeyError(err)) {
-      const existing = await getTerm(name);
+      const existing = await getTerm(name, user.id);
       if (existing) return { ...existing, alreadyExisted: true };
     }
     throw err;
   }
-  if (user) {
-    const settings = await getUserSettings(user.id);
-    if (settings?.notion_api_key && settings?.notion_database_id) {
-      const credentials = { apiKey: settings.notion_api_key, databaseId: settings.notion_database_id };
-      let notion_page_id: string | undefined;
-      try {
-        notion_page_id = await createNotionPage(credentials, {
-          name: term.name,
-          content: term.content,
-          categories: term.categories,
-          priority: term.priority,
-        });
-        const synced = await updateTerm(term.id, { notion_page_id });
-        return synced ?? term;
-      } catch (err) {
-        if (notion_page_id) {
-          await archiveNotionPage(credentials, notion_page_id).catch(() => {});
-        }
-        await deleteTerm(term.id);
-        throw err;
+  const settings = await getUserSettings(user.id);
+  if (settings?.notion_api_key && settings?.notion_database_id) {
+    const credentials = { apiKey: settings.notion_api_key, databaseId: settings.notion_database_id };
+    let notion_page_id: string | undefined;
+    try {
+      notion_page_id = await createNotionPage(credentials, {
+        name: term.name,
+        content: term.content,
+        categories: term.categories,
+        priority: term.priority,
+      });
+      const synced = await updateTerm(term.id, { notion_page_id });
+      return synced ?? term;
+    } catch (err) {
+      if (notion_page_id) {
+        await archiveNotionPage(credentials, notion_page_id).catch(() => {});
       }
+      await deleteTerm(term.id);
+      throw err;
     }
   }
 

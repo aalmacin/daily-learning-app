@@ -59,7 +59,7 @@ export async function syncWithNotion(): Promise<{ synced: number; imported: numb
   const timezone = settings.timezone;
 
   const [terms, notionPagesResult] = await Promise.all([
-    getAllTerms(),
+    getAllTerms(user.id),
     getAllNotionPages(credentials).catch((err: unknown) => err),
   ]);
 
