@@ -618,6 +618,14 @@ export type ReviewItem = {
   categories: string[];
 };
 
+export type TermListItem = {
+  id: number;
+  user_id: string;
+  term_id: number;
+  position: number;
+  term: Term;
+};
+
 export async function getExplainedAtForTerm(termId: number): Promise<string | null> {
   const { data } = await getSupabase()
     .from('term_explained_content')
@@ -750,4 +758,135 @@ export async function getAvailableReviewMonths(userId: string): Promise<{ year: 
     }
   }
   return months;
+}
+
+export async function getTermList(userId: string): Promise<TermListItem[]> {
+  const { data: rows, error } = await getSupabase()
+    .from('term_list')
+    .select('*, terms(*)')
+    .eq('user_id', userId)
+    .order('position', { ascending: true });
+  if (error) throw error;
+  if (!rows || rows.length === 0) return [];
+
+  type TermListRow = { id: number; user_id: string; term_id: number; position: number; terms: TermRow };
+  const typedRows = rows as unknown as TermListRow[];
+  const termIds = typedRows.map((r) => r.term_id);
+
+  const [catLinksResult, explainedResult] = await Promise.all([
+    getSupabase()
+      .from('term_categories')
+      .select('term_id, categories(name)')
+      .in('term_id', termIds),
+    getSupabase()
+      .from('concept_refinements')
+      .select('term_id')
+      .in('term_id', termIds)
+      .not('refinement_formatted_note', 'is', null),
+  ]);
+  if (catLinksResult.error) throw catLinksResult.error;
+  if (explainedResult.error) throw explainedResult.error;
+
+  const catMap = new Map<number, string[]>();
+  for (const link of catLinksResult.data as unknown as { term_id: number; categories: { name: string } | null }[]) {
+    if (!link.categories) continue;
+    if (!catMap.has(link.term_id)) catMap.set(link.term_id, []);
+    catMap.get(link.term_id)!.push(link.categories.name);
+  }
+
+  const explainedIds = new Set((explainedResult.data as { term_id: number }[]).map((r) => r.term_id));
+
+  return typedRows.map((row) => ({
+    id: row.id,
+    user_id: row.user_id,
+    term_id: row.term_id,
+    position: row.position,
+    term: {
+      ...row.terms,
+      categories: catMap.get(row.term_id) ?? [],
+      explained: explainedIds.has(row.term_id),
+    },
+  }));
+}
+
+export async function addTermToList(termId: number, userId: string): Promise<void> {
+  // Remove any existing entry for this term (handles "move to top" case)
+  const { error: deleteError } = await getSupabase()
+    .from('term_list')
+    .delete()
+    .eq('term_id', termId)
+    .eq('user_id', userId);
+  if (deleteError) throw deleteError;
+
+  // Get remaining items ordered by position
+  const { data: items, error } = await getSupabase()
+    .from('term_list')
+    .select('id')
+    .eq('user_id', userId)
+    .order('position', { ascending: true });
+  if (error) throw error;
+
+  const existing = items as { id: number }[];
+
+  // Shift all existing items to positions 2, 3, 4... and insert new at position 1
+  const results = await Promise.all([
+    ...existing.map((item, i) =>
+      getSupabase()
+        .from('term_list')
+        .update({ position: i + 2 } as unknown as never)
+        .eq('id', item.id)
+    ),
+    getSupabase()
+      .from('term_list')
+      .insert({ term_id: termId, user_id: userId, position: 1 } as unknown as never),
+  ]);
+  for (const result of results) {
+    if (result.error) throw result.error;
+  }
+}
+
+export async function removeFromTermList(id: number, userId: string): Promise<void> {
+  const { data: item, error: fetchError } = await getSupabase()
+    .from('term_list')
+    .select('position')
+    .eq('id', id)
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (fetchError) throw fetchError;
+  if (!item) return;
+
+  const removedPosition = (item as { position: number }).position;
+
+  await getSupabase().from('term_list').delete().eq('id', id).eq('user_id', userId);
+
+  const { data: below, error: belowError } = await getSupabase()
+    .from('term_list')
+    .select('id, position')
+    .eq('user_id', userId)
+    .gt('position', removedPosition);
+  if (belowError) throw belowError;
+
+  await Promise.all(
+    (below as { id: number; position: number }[]).map((row) =>
+      getSupabase()
+        .from('term_list')
+        .update({ position: row.position - 1 } as unknown as never)
+        .eq('id', row.id)
+    )
+  );
+}
+
+export async function reorderTermList(orderedIds: number[], userId: string): Promise<void> {
+  const results = await Promise.all(
+    orderedIds.map((id, index) =>
+      getSupabase()
+        .from('term_list')
+        .update({ position: index + 1 } as unknown as never)
+        .eq('id', id)
+        .eq('user_id', userId)
+    )
+  );
+  for (const result of results) {
+    if (result.error) throw result.error;
+  }
 }

@@ -20,6 +20,7 @@ import {
 } from '@tanstack/react-table';
 import { useMutation } from '@tanstack/react-query';
 import { deleteTerm, updateTermPriority } from '@/actions/terms';
+import { addToTermList } from '@/actions/termList';
 import { addToNotion, syncWithNotion } from '@/actions/notion';
 import { updateTermCategories } from '@/actions/categories';
 import type { Term, Category, Priority } from '@/lib/db';
@@ -324,6 +325,16 @@ export function TermsTable({
     },
   });
 
+  const [addToListSuccessId, setAddToListSuccessId] = useState<number | null>(null);
+
+  const addToListMutation = useMutation({
+    mutationFn: (termId: number) => addToTermList(termId),
+    onSuccess: (_, termId) => {
+      setAddToListSuccessId(termId);
+      setTimeout(() => setAddToListSuccessId(null), 3000);
+    },
+  });
+
   const syncMutation = useMutation({
     mutationFn: syncWithNotion,
     onSuccess: ({ synced, imported, pushed, contentSynced, skipped, stale, dbError }) => {
@@ -500,6 +511,13 @@ export function TermsTable({
                 >
                   {isAddingToNotion ? 'Adding…' : 'Add to Notion'}
                 </button>
+                <button
+                  onClick={() => addToListMutation.mutate(term.id)}
+                  disabled={addToListMutation.isPending && addToListMutation.variables === term.id}
+                  className="px-2 py-1 text-xs rounded bg-zinc-100 text-zinc-700 hover:bg-zinc-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 whitespace-nowrap"
+                >
+                  {addToListSuccessId === term.id ? 'Added!' : 'Add to List'}
+                </button>
               </div>
               {isNotionSuccess && (
                 <p className="text-xs text-green-600 dark:text-green-400">Added to Notion.</p>
@@ -509,7 +527,7 @@ export function TermsTable({
         },
       }),
     ],
-    [deleteMutation, addToNotionMutation, notionSuccessId, confirmingDeleteId, currentSort, currentDir, timezone],
+    [deleteMutation, addToNotionMutation, notionSuccessId, confirmingDeleteId, currentSort, currentDir, timezone, addToListMutation, addToListSuccessId],
   );
 
   const table = useReactTable({

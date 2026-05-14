@@ -13,6 +13,9 @@ export default function NavMenu() {
       <Link href="/terms" onClick={close} className="text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50 transition-colors">
         Terms
       </Link>
+      <Link href="/term-list" onClick={close} className="text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50 transition-colors">
+        Term List
+      </Link>
       <Link href="/categories" onClick={close} className="text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50 transition-colors">
         Categories
       </Link>
@@ -60,6 +63,7 @@ export default function NavMenu() {
           <nav className="absolute top-full left-0 right-0 z-50 flex flex-col gap-0 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 shadow-lg">
             {[
               { href: '/terms', label: 'Terms' },
+              { href: '/term-list', label: 'Term List' },
               { href: '/categories', label: 'Categories' },
               { href: '/review', label: 'Review' },
               { href: '/settings', label: 'Settings' },

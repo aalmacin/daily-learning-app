@@ -6,6 +6,7 @@ import { useStore } from '@tanstack/react-store'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { termStore, updateTermInStore, removeTermFromStore, dismissTerm, type TermResult, type DoneTermResult } from '@/store/termStore'
 import { regenerateTerm, deleteTerm, updateTermPriority } from '@/actions/terms'
+import { addToTermList } from '@/actions/termList'
 import { addToNotion } from '@/actions/notion'
 import { updateTermCategories, fetchCategories } from '@/actions/categories'
 import { queryKeys } from '@/lib/queryKeys'
@@ -98,7 +99,17 @@ function DoneTermCard({ term }: { term: DoneTermResult }) {
     onSuccess: updateTermInStore,
   })
 
-  const anyError = regenerateMutation.error ?? deleteMutation.error ?? notionMutation.error ?? priorityMutation.error ?? categoryMutation.error
+  const [addedToList, setAddedToList] = useState(false)
+
+  const termListMutation = useMutation({
+    mutationFn: () => addToTermList(term.id),
+    onSuccess: () => {
+      setAddedToList(true)
+      setTimeout(() => setAddedToList(false), 3000)
+    },
+  })
+
+  const anyError = regenerateMutation.error ?? deleteMutation.error ?? notionMutation.error ?? priorityMutation.error ?? categoryMutation.error ?? termListMutation.error
 
   function toggleCategory(cat: string) {
     const next = term.categories.includes(cat)
@@ -184,6 +195,14 @@ function DoneTermCard({ term }: { term: DoneTermResult }) {
         >
           Open
         </Link>
+
+        <button
+          onClick={() => termListMutation.mutate()}
+          disabled={termListMutation.isPending}
+          className="rounded-lg border border-zinc-300 dark:border-zinc-700 px-3 py-1.5 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          {termListMutation.isPending ? 'Adding…' : addedToList ? 'Added to List!' : 'Add to List'}
+        </button>
 
         <button
           onClick={() => regenerateMutation.mutate()}
