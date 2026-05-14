@@ -3,6 +3,7 @@
 import {
   addTermToList as dbAdd,
   removeFromTermList as dbRemove,
+  removeFromTermListByTermId as dbRemoveByTermId,
   reorderTermList as dbReorder,
   getTermList as dbGetList,
 } from '@/lib/db';
@@ -21,6 +22,13 @@ export async function removeFromTermList(id: number): Promise<void> {
   const user = await getCurrentUser();
   if (!user) throw new Error('Not authenticated');
   await dbRemove(id, user.id);
+  revalidatePath('/term-list');
+}
+
+export async function removeFromTermListByTermId(termId: number): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) throw new Error('Not authenticated');
+  await dbRemoveByTermId(termId, user.id);
   revalidatePath('/term-list');
 }
 

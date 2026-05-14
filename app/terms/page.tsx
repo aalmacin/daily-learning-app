@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { getTermsPaginated, getAllCategories, getUserSettings } from '@/lib/db';
+import { getTermsPaginated, getAllCategories, getUserSettings, getTermList } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 import { TermsTable } from '@/components/TermsTable';
 import type { TermsQuery, Priority } from '@/lib/db';
@@ -41,11 +41,14 @@ export default async function TermsPage({
   const user = await getCurrentUser();
   const userId = user!.id;
 
-  const [{ terms, total }, categories, settings] = await Promise.all([
+  const [{ terms, total }, categories, settings, termList] = await Promise.all([
     getTermsPaginated({ userId, page, pageSize, q, categoryNames, notion, sort, dir, priority, dailyLearning }),
     getAllCategories(userId),
     getUserSettings(userId),
+    getTermList(userId),
   ]);
+
+  const termListTermIds = new Set(termList.map((item) => item.term_id));
 
   const notionConfigured = !!(settings?.notion_api_key && settings?.notion_database_id);
 
@@ -80,6 +83,7 @@ export default async function TermsPage({
           currentSort={sort}
           currentDir={dir}
           timezone={settings?.timezone ?? 'UTC'}
+          initialTermListTermIds={termListTermIds}
         />
       </div>
     </div>

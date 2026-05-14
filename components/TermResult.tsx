@@ -6,7 +6,7 @@ import { useStore } from '@tanstack/react-store'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { termStore, updateTermInStore, removeTermFromStore, dismissTerm, type TermResult, type DoneTermResult } from '@/store/termStore'
 import { regenerateTerm, deleteTerm, updateTermPriority } from '@/actions/terms'
-import { addToTermList } from '@/actions/termList'
+import { addToTermList, removeFromTermListByTermId } from '@/actions/termList'
 import { addToNotion } from '@/actions/notion'
 import { updateTermCategories, fetchCategories } from '@/actions/categories'
 import { queryKeys } from '@/lib/queryKeys'
@@ -99,17 +99,19 @@ function DoneTermCard({ term }: { term: DoneTermResult }) {
     onSuccess: updateTermInStore,
   })
 
-  const [addedToList, setAddedToList] = useState(false)
+  const [inTermList, setInTermList] = useState(false)
 
-  const termListMutation = useMutation({
+  const addToListMutation = useMutation({
     mutationFn: () => addToTermList(term.id),
-    onSuccess: () => {
-      setAddedToList(true)
-      setTimeout(() => setAddedToList(false), 3000)
-    },
+    onSuccess: () => setInTermList(true),
   })
 
-  const anyError = regenerateMutation.error ?? deleteMutation.error ?? notionMutation.error ?? priorityMutation.error ?? categoryMutation.error ?? termListMutation.error
+  const removeFromListMutation = useMutation({
+    mutationFn: () => removeFromTermListByTermId(term.id),
+    onSuccess: () => setInTermList(false),
+  })
+
+  const anyError = regenerateMutation.error ?? deleteMutation.error ?? notionMutation.error ?? priorityMutation.error ?? categoryMutation.error ?? addToListMutation.error ?? removeFromListMutation.error
 
   function toggleCategory(cat: string) {
     const next = term.categories.includes(cat)
@@ -197,11 +199,11 @@ function DoneTermCard({ term }: { term: DoneTermResult }) {
         </Link>
 
         <button
-          onClick={() => termListMutation.mutate()}
-          disabled={termListMutation.isPending}
+          onClick={() => inTermList ? removeFromListMutation.mutate() : addToListMutation.mutate()}
+          disabled={addToListMutation.isPending || removeFromListMutation.isPending}
           className="rounded-lg border border-zinc-300 dark:border-zinc-700 px-3 py-1.5 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
-          {termListMutation.isPending ? 'Adding…' : addedToList ? 'Added to List!' : 'Add to List'}
+          {addToListMutation.isPending ? 'Adding…' : removeFromListMutation.isPending ? 'Removing…' : inTermList ? 'Remove from List' : 'Add to List'}
         </button>
 
         <button

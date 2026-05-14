@@ -876,6 +876,18 @@ export async function removeFromTermList(id: number, userId: string): Promise<vo
   );
 }
 
+export async function removeFromTermListByTermId(termId: number, userId: string): Promise<void> {
+  const { data: item, error: fetchError } = await getSupabase()
+    .from('term_list')
+    .select('id')
+    .eq('term_id', termId)
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (fetchError) throw fetchError;
+  if (!item) return;
+  await removeFromTermList((item as { id: number }).id, userId);
+}
+
 export async function reorderTermList(orderedIds: number[], userId: string): Promise<void> {
   const results = await Promise.all(
     orderedIds.map((id, index) =>
