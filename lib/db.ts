@@ -181,7 +181,11 @@ export async function getTermsPaginated({
     if (termIdFilter.length === 0) return { terms: [], total: 0 };
   }
 
-  let query = getSupabase().from('terms').select('*', { count: 'exact' }).eq('user_id', userId);
+  // Use a single query with joined categories and count
+  let query = getSupabase()
+    .from('terms')
+    .select('*, term_categories(categories(name)), concept_refinements!left(term_id)', { count: 'exact' })
+    .eq('user_id', userId);
   if (q) query = query.ilike('name', `%${q}%`);
   if (notion === 'pending') query = query.is('notion_page_id', null);
   if (notion === 'added') query = query.not('notion_page_id', 'is', null);
@@ -189,7 +193,10 @@ export async function getTermsPaginated({
   if (dailyLearning === 'done') query = query.eq('daily_learning_done', true);
   if (dailyLearning === 'not-done') query = query.eq('daily_learning_done', false);
   if (termIdFilter !== null) query = query.in('id', termIdFilter);
-  query = query.order(sort, { ascending: dir === 'asc' }).range(offset, offset + pageSize - 1);
+  query = query
+    .not('concept_refinements.refinement_formatted_note', 'is', null)
+    .order(sort, { ascending: dir === 'asc' })
+    .range(offset, offset + pageSize - 1);
 
   const { data: rows, count, error } = await query;
   if (error) throw error;
@@ -197,37 +204,20 @@ export async function getTermsPaginated({
   const total = count ?? 0;
   if (!rows || rows.length === 0) return { terms: [], total };
 
-  const rowIds = (rows as TermRow[]).map((r) => r.id);
-
-  const [catLinksResult, explainedResult] = await Promise.all([
-    getSupabase()
-      .from('term_categories')
-      .select('term_id, categories(name)')
-      .in('term_id', rowIds),
-    getSupabase()
-      .from('concept_refinements')
-      .select('term_id')
-      .in('term_id', rowIds)
-      .not('refinement_formatted_note', 'is', null),
-  ]);
-  if (catLinksResult.error) throw catLinksResult.error;
-  if (explainedResult.error) throw explainedResult.error;
-
-  const catMap = new Map<number, string[]>();
-  for (const link of catLinksResult.data as unknown as { term_id: number; categories: { name: string } | null }[]) {
-    if (!link.categories) continue;
-    if (!catMap.has(link.term_id)) catMap.set(link.term_id, []);
-    catMap.get(link.term_id)!.push(link.categories.name);
-  }
-
-  const explainedIds = new Set((explainedResult.data as { term_id: number }[]).map((r) => r.term_id));
+  type JoinedRow = TermRow & {
+    term_categories: { categories: { name: string } | null }[];
+    concept_refinements: { term_id: number }[];
+  };
 
   return {
-    terms: (rows as TermRow[]).map((row) => ({
-      ...row,
-      categories: catMap.get(row.id) ?? [],
-      explained: explainedIds.has(row.id),
-    })),
+    terms: (rows as unknown as JoinedRow[]).map((row) => {
+      const categories = row.term_categories
+        .map((tc) => tc.categories?.name)
+        .filter((name): name is string => name != null);
+      const explained = row.concept_refinements.length > 0;
+      const { term_categories: _, concept_refinements: __, ...termRow } = row;
+      return { ...termRow, categories, explained };
+    }),
     total,
   };
 }
@@ -263,11 +253,19 @@ export async function getAllTerms(userId: string): Promise<Term[]> {
     .order('created_at', { ascending: false });
   if (error) throw error;
 
+  if (!rows || rows.length === 0) return [];
+
+  const rowIds = (rows as TermRow[]).map((r) => r.id);
+
   const [catLinksResult, explainedResult] = await Promise.all([
-    getSupabase().from('term_categories').select('term_id, categories(name)'),
+    getSupabase()
+      .from('term_categories')
+      .select('term_id, categories(name)')
+      .in('term_id', rowIds),
     getSupabase()
       .from('concept_refinements')
       .select('term_id')
+      .in('term_id', rowIds)
       .not('refinement_formatted_note', 'is', null),
   ]);
   if (catLinksResult.error) throw catLinksResult.error;
@@ -758,6 +756,15 @@ export async function getAvailableReviewMonths(userId: string): Promise<{ year: 
     }
   }
   return months;
+}
+
+export async function getTermListTermIds(userId: string): Promise<number[]> {
+  const { data, error } = await getSupabase()
+    .from('term_list')
+    .select('term_id')
+    .eq('user_id', userId);
+  if (error) throw error;
+  return (data as { term_id: number }[]).map((r) => r.term_id);
 }
 
 export async function getTermList(userId: string): Promise<TermListItem[]> {
