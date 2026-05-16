@@ -19,9 +19,6 @@ export default function NavMenu() {
       <Link href="/categories" onClick={close} className="text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50 transition-colors">
         Categories
       </Link>
-      <Link href="/review" onClick={close} className="text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50 transition-colors">
-        Review
-      </Link>
       <Link href="/settings" onClick={close} className="text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50 transition-colors">
         Settings
       </Link>
@@ -65,7 +62,6 @@ export default function NavMenu() {
               { href: '/terms', label: 'Terms' },
               { href: '/term-list', label: 'Term List' },
               { href: '/categories', label: 'Categories' },
-              { href: '/review', label: 'Review' },
               { href: '/settings', label: 'Settings' },
             ].map(({ href, label }) => (
               <Link
