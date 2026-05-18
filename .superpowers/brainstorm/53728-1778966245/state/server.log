@@ -1,0 +1,9 @@
+{"type":"server-started","port":54785,"host":"127.0.0.1","url_host":"localhost","url":"http://localhost:54785","screen_dir":"/Users/aalmacin/Projects/daily-learning-worktree/fix-db-index/.superpowers/brainstorm/53728-1778966245/content","state_dir":"/Users/aalmacin/Projects/daily-learning-worktree/fix-db-index/.superpowers/brainstorm/53728-1778966245/state"}
+{"type":"screen-added","file":"/Users/aalmacin/Projects/daily-learning-worktree/fix-db-index/.superpowers/brainstorm/53728-1778966245/content/step4-flashcard-creation.html"}
+{"type":"screen-added","file":"/Users/aalmacin/Projects/daily-learning-worktree/fix-db-index/.superpowers/brainstorm/53728-1778966245/content/review-page.html"}
+{"type":"screen-added","file":"/Users/aalmacin/Projects/daily-learning-worktree/fix-db-index/.superpowers/brainstorm/53728-1778966245/content/review-page-v2.html"}
+{"type":"screen-added","file":"/Users/aalmacin/Projects/daily-learning-worktree/fix-db-index/.superpowers/brainstorm/53728-1778966245/content/review-page-v3.html"}
+{"type":"screen-added","file":"/Users/aalmacin/Projects/daily-learning-worktree/fix-db-index/.superpowers/brainstorm/53728-1778966245/content/review-page-v4.html"}
+{"type":"screen-added","file":"/Users/aalmacin/Projects/daily-learning-worktree/fix-db-index/.superpowers/brainstorm/53728-1778966245/content/review-page-v5.html"}
+{"type":"screen-added","file":"/Users/aalmacin/Projects/daily-learning-worktree/fix-db-index/.superpowers/brainstorm/53728-1778966245/content/waiting.html"}
+{"type":"server-stopped","reason":"idle timeout"}

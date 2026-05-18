@@ -1,0 +1,82 @@
+<h2>Step 4: Flashcard Creation (Term Detail Page)</h2>
+<p class="subtitle">Appears after the Refined Explanation section in the Feynman Method card</p>
+
+<div class="mockup">
+  <div class="mockup-header">Term Detail Page — Step 4: Flashcards</div>
+  <div class="mockup-body" style="padding: 24px; font-family: system-ui, sans-serif;">
+
+    <!-- Step label -->
+    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
+      <span style="display: flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: #e4e4e7; font-size: 11px; font-weight: bold; color: #3f3f46;">4</span>
+      <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #71717a;">Flashcards</span>
+    </div>
+
+    <!-- Create button -->
+    <button style="padding: 8px 16px; font-size: 13px; font-weight: 500; border-radius: 8px; background: #18181b; color: white; border: none; cursor: pointer; margin-bottom: 16px;">Create Flashcard</button>
+
+    <!-- Text field (shown after clicking Create Flashcard) -->
+    <div style="border: 1px solid #e4e4e7; border-radius: 8px; padding: 12px; margin-bottom: 12px; background: #fafafa;">
+      <p style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #71717a; margin: 0 0 8px 0;">Edit content — wrap terms with __ to create cloze deletions</p>
+      <div style="border: 1px solid #d4d4d8; border-radius: 6px; padding: 12px; background: white; font-size: 13px; line-height: 1.6; color: #3f3f46; min-height: 80px;">
+        A __closure__ is a function that has access to variables from its __outer scope__ even after the outer function has returned. This enables __data encapsulation__ and private state in JavaScript.
+      </div>
+      <div style="display: flex; gap: 8px; margin-top: 12px;">
+        <button style="padding: 6px 14px; font-size: 12px; font-weight: 500; border-radius: 6px; background: #18181b; color: white; border: none; cursor: pointer;">Save Card</button>
+        <button style="padding: 6px 14px; font-size: 12px; font-weight: 500; border-radius: 6px; background: white; color: #3f3f46; border: 1px solid #d4d4d8; cursor: pointer;">Cancel</button>
+      </div>
+    </div>
+
+    <!-- Card list -->
+    <p style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #71717a; margin: 24px 0 12px 0;">Cards (3)</p>
+
+    <!-- Card 1 -->
+    <div style="border: 1px solid #e4e4e7; border-radius: 8px; padding: 12px; margin-bottom: 8px; background: white;">
+      <p style="font-size: 13px; color: #3f3f46; margin: 0 0 8px 0; line-height: 1.5;">A <span style="display: inline-block; width: 60px; border-bottom: 2px solid #a1a1aa; margin: 0 2px;"></span> is a function that has access to variables from its outer scope.</p>
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; gap: 12px; font-size: 11px; color: #a1a1aa;">
+          <span>Interval: 7d</span>
+          <span>Next: May 20</span>
+          <span>Last: May 13</span>
+        </div>
+        <div style="display: flex; gap: 6px;">
+          <button style="padding: 3px 8px; font-size: 11px; border-radius: 4px; background: white; color: #71717a; border: 1px solid #e4e4e7; cursor: pointer;">Edit</button>
+          <button style="padding: 3px 8px; font-size: 11px; border-radius: 4px; background: white; color: #71717a; border: 1px solid #e4e4e7; cursor: pointer;">Reset</button>
+          <button style="padding: 3px 8px; font-size: 11px; border-radius: 4px; background: white; color: #ef4444; border: 1px solid #fecaca; cursor: pointer;">Delete</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 2 -->
+    <div style="border: 1px solid #e4e4e7; border-radius: 8px; padding: 12px; margin-bottom: 8px; background: white;">
+      <p style="font-size: 13px; color: #3f3f46; margin: 0 0 8px 0; line-height: 1.5;">A closure is a function that has access to variables from its <span style="display: inline-block; width: 80px; border-bottom: 2px solid #a1a1aa; margin: 0 2px;"></span> even after the outer function has returned.</p>
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; gap: 12px; font-size: 11px; color: #a1a1aa;">
+          <span>Interval: 3d</span>
+          <span>Next: May 18</span>
+          <span>Last: May 15</span>
+        </div>
+        <div style="display: flex; gap: 6px;">
+          <button style="padding: 3px 8px; font-size: 11px; border-radius: 4px; background: white; color: #71717a; border: 1px solid #e4e4e7; cursor: pointer;">Edit</button>
+          <button style="padding: 3px 8px; font-size: 11px; border-radius: 4px; background: white; color: #71717a; border: 1px solid #e4e4e7; cursor: pointer;">Reset</button>
+          <button style="padding: 3px 8px; font-size: 11px; border-radius: 4px; background: white; color: #ef4444; border: 1px solid #fecaca; cursor: pointer;">Delete</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 3 (new, never reviewed) -->
+    <div style="border: 1px solid #e4e4e7; border-radius: 8px; padding: 12px; background: white;">
+      <p style="font-size: 13px; color: #3f3f46; margin: 0 0 8px 0; line-height: 1.5;">This enables <span style="display: inline-block; width: 110px; border-bottom: 2px solid #a1a1aa; margin: 0 2px;"></span> and private state in JavaScript.</p>
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; gap: 12px; font-size: 11px; color: #a1a1aa;">
+          <span>New — not yet reviewed</span>
+        </div>
+        <div style="display: flex; gap: 6px;">
+          <button style="padding: 3px 8px; font-size: 11px; border-radius: 4px; background: white; color: #71717a; border: 1px solid #e4e4e7; cursor: pointer;">Edit</button>
+          <button style="padding: 3px 8px; font-size: 11px; border-radius: 4px; background: white; color: #71717a; border: 1px solid #e4e4e7; cursor: pointer;">Reset</button>
+          <button style="padding: 3px 8px; font-size: 11px; border-radius: 4px; background: white; color: #ef4444; border: 1px solid #fecaca; cursor: pointer;">Delete</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>

@@ -3,7 +3,8 @@
 import { useState, useEffect, useTransition } from 'react';
 import Markdown from 'react-markdown';
 import { useRouter } from 'next/navigation';
-import type { ChatMessage, Term, ConceptRefinement } from '@/lib/db';
+import type { ChatMessage, Term, ConceptRefinement, Flashcard } from '@/lib/db';
+import { FlashcardSection } from '@/components/FlashcardSection';
 import {
   submitPreRefinement,
   submitRefinement,
@@ -20,6 +21,7 @@ type Props = {
   initialRefinements: ConceptRefinement[];
   initialChats: Record<number, ChatMessage[]>;
   explainedAt?: string | null;
+  initialFlashcards: Flashcard[];
 };
 
 type ViewMode = { type: 'form' } | { type: 'attempt'; index: number };
@@ -43,7 +45,7 @@ function StepLabel({ n, label }: { n: number; label: string }) {
   );
 }
 
-export function TermDetailPage({ term, initialRefinements, initialChats, explainedAt }: Props) {
+export function TermDetailPage({ term, initialRefinements, initialChats, explainedAt, initialFlashcards }: Props) {
   const router = useRouter();
   const [refinements, setRefinements] = useState(initialRefinements);
   const [viewMode, setViewMode] = useState<ViewMode>(
@@ -632,6 +634,15 @@ export function TermDetailPage({ term, initialRefinements, initialChats, explain
                     </div>
                   )}
                 </div>
+              )}
+
+              {/* Step 4 — Flashcards (only when latest has a formatted note) */}
+              {isLatest && isComplete(viewing) && viewing.refinement_formatted_note && (
+                <FlashcardSection
+                  termId={term.id}
+                  formattedNote={viewing.refinement_formatted_note}
+                  initialFlashcards={initialFlashcards}
+                />
               )}
             </div>
           )}
