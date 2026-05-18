@@ -499,6 +499,19 @@ export type ChatMessage = {
   created_at: string;
 };
 
+export type Flashcard = {
+  id: number;
+  term_id: number;
+  content: string;
+  interval_step: number;
+  next_review: string | null;
+  last_reviewed: string | null;
+  created_at: string;
+  user_id: string;
+};
+
+export const SRS_INTERVALS = [1, 3, 7, 14, 30, 60] as const;
+
 export async function getChatsByRefinementId(refinementId: number): Promise<ChatMessage[]> {
   const { data, error } = await getSupabase()
     .from('research_chats')
@@ -908,4 +921,177 @@ export async function reorderTermList(orderedIds: number[], userId: string): Pro
   for (const result of results) {
     if (result.error) throw result.error;
   }
+}
+
+export async function getFlashcardsByTermId(termId: number, userId: string): Promise<Flashcard[]> {
+  const { data, error } = await getSupabase()
+    .from('flashcards')
+    .select('*')
+    .eq('term_id', termId)
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data as Flashcard[];
+}
+
+export async function createFlashcard(termId: number, content: string, userId: string): Promise<Flashcard> {
+  const { data, error } = await getSupabase()
+    .from('flashcards')
+    .insert({ term_id: termId, content, user_id: userId } as unknown as never)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as Flashcard;
+}
+
+export async function updateFlashcard(id: number, content: string, userId: string): Promise<Flashcard> {
+  const { data, error } = await getSupabase()
+    .from('flashcards')
+    .update({ content } as unknown as never)
+    .eq('id', id)
+    .eq('user_id', userId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as Flashcard;
+}
+
+export async function deleteFlashcard(id: number, userId: string): Promise<void> {
+  const { error } = await getSupabase()
+    .from('flashcards')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', userId);
+  if (error) throw error;
+}
+
+export async function resetFlashcardReview(id: number, userId: string): Promise<Flashcard> {
+  const { data, error } = await getSupabase()
+    .from('flashcards')
+    .update({ interval_step: 0, next_review: null, last_reviewed: null } as unknown as never)
+    .eq('id', id)
+    .eq('user_id', userId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as Flashcard;
+}
+
+export async function getDueFlashcards(userId: string, categoryNames?: string[]): Promise<(Flashcard & { term_name: string })[]> {
+  let termIdFilter: number[] | null = null;
+  if (categoryNames && categoryNames.length > 0) {
+    const { data: cats, error: catError } = await getSupabase()
+      .from('categories')
+      .select('id')
+      .in('name', categoryNames)
+      .eq('user_id', userId);
+    if (catError) throw catError;
+    const catIds = (cats as { id: number }[]).map((c) => c.id);
+    if (catIds.length === 0) return [];
+    const { data: links, error: linkError } = await getSupabase()
+      .from('term_categories')
+      .select('term_id')
+      .in('category_id', catIds);
+    if (linkError) throw linkError;
+    termIdFilter = [...new Set((links as { term_id: number }[]).map((l) => l.term_id))];
+    if (termIdFilter.length === 0) return [];
+  }
+
+  let query = getSupabase()
+    .from('flashcards')
+    .select('*, terms(name)')
+    .eq('user_id', userId)
+    .not('next_review', 'is', null)
+    .lte('next_review', new Date().toISOString());
+  if (termIdFilter) query = query.in('term_id', termIdFilter);
+  query = query.order('next_review', { ascending: true });
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  return (data as unknown as (Flashcard & { terms: { name: string } })[]).map((row) => {
+    const { terms, ...rest } = row;
+    return { ...rest, term_name: terms.name };
+  });
+}
+
+export async function getNewFlashcards(userId: string, categoryNames?: string[]): Promise<(Flashcard & { term_name: string })[]> {
+  let termIdFilter: number[] | null = null;
+  if (categoryNames && categoryNames.length > 0) {
+    const { data: cats, error: catError } = await getSupabase()
+      .from('categories')
+      .select('id')
+      .in('name', categoryNames)
+      .eq('user_id', userId);
+    if (catError) throw catError;
+    const catIds = (cats as { id: number }[]).map((c) => c.id);
+    if (catIds.length === 0) return [];
+    const { data: links, error: linkError } = await getSupabase()
+      .from('term_categories')
+      .select('term_id')
+      .in('category_id', catIds);
+    if (linkError) throw linkError;
+    termIdFilter = [...new Set((links as { term_id: number }[]).map((l) => l.term_id))];
+    if (termIdFilter.length === 0) return [];
+  }
+
+  let query = getSupabase()
+    .from('flashcards')
+    .select('*, terms(name)')
+    .eq('user_id', userId)
+    .is('next_review', null);
+  if (termIdFilter) query = query.in('term_id', termIdFilter);
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  return (data as unknown as (Flashcard & { terms: { name: string } })[]).map((row) => {
+    const { terms, ...rest } = row;
+    return { ...rest, term_name: terms.name };
+  });
+}
+
+function getStartOfDay(timezone?: string): Date {
+  const now = new Date();
+  const tz = timezone || 'UTC';
+  const dateStr = now.toLocaleDateString('en-CA', { timeZone: tz });
+  return new Date(`${dateStr}T00:00:00`);
+}
+
+
+export async function reviewFlashcard(id: number, userId: string, correct: boolean, timezone?: string): Promise<Flashcard> {
+  const { data: card, error: fetchError } = await getSupabase()
+    .from('flashcards')
+    .select('*')
+    .eq('id', id)
+    .eq('user_id', userId)
+    .single();
+  if (fetchError) throw fetchError;
+
+  const current = card as Flashcard;
+  let newStep: number;
+  if (correct) {
+    newStep = Math.min(current.interval_step + 1, SRS_INTERVALS.length - 1);
+  } else {
+    newStep = 0;
+  }
+
+  const intervalDays = SRS_INTERVALS[newStep];
+  const startOfToday = getStartOfDay(timezone);
+  const nextReview = new Date(startOfToday);
+  nextReview.setDate(nextReview.getDate() + intervalDays);
+
+  const { data, error } = await getSupabase()
+    .from('flashcards')
+    .update({
+      interval_step: newStep,
+      next_review: nextReview.toISOString(),
+      last_reviewed: new Date().toISOString(),
+    } as unknown as never)
+    .eq('id', id)
+    .eq('user_id', userId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as Flashcard;
 }
