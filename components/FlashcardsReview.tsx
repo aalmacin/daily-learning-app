@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useTransition, useCallback } from 'react';
+import Link from 'next/link';
 import { getReviewCards, submitReview } from '@/actions/flashcards';
 import { SRS_INTERVALS, type Flashcard, type Category } from '@/lib/db';
 
@@ -152,7 +153,7 @@ export function FlashcardsReview({ categories }: Props) {
             {/* Term reference (only on back) */}
             {showBack && (
               <p className="text-xs text-zinc-400 dark:text-zinc-500 text-center">
-                From: {currentCard.term_name}
+                From: <Link href={`/terms/${currentCard.term_id}`} className="underline hover:text-zinc-600 dark:hover:text-zinc-300">{currentCard.term_name}</Link>
               </p>
             )}
 
