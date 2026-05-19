@@ -830,7 +830,7 @@ export async function getTermList(userId: string): Promise<TermListItem[]> {
 }
 
 export async function addTermToList(termId: number, userId: string): Promise<void> {
-  // Remove any existing entry for this term (handles "move to top" case)
+  // Remove any existing entry for this term
   const { error: deleteError } = await getSupabase()
     .from('term_list')
     .delete()
@@ -838,31 +838,22 @@ export async function addTermToList(termId: number, userId: string): Promise<voi
     .eq('user_id', userId);
   if (deleteError) throw deleteError;
 
-  // Get remaining items ordered by position
+  // Get the current max position
   const { data: items, error } = await getSupabase()
     .from('term_list')
-    .select('id')
+    .select('position')
     .eq('user_id', userId)
-    .order('position', { ascending: true });
+    .order('position', { ascending: false })
+    .limit(1);
   if (error) throw error;
 
-  const existing = items as { id: number }[];
+  const maxPosition = items.length > 0 ? (items[0] as { position: number }).position : 0;
 
-  // Shift all existing items to positions 2, 3, 4... and insert new at position 1
-  const results = await Promise.all([
-    ...existing.map((item, i) =>
-      getSupabase()
-        .from('term_list')
-        .update({ position: i + 2 } as unknown as never)
-        .eq('id', item.id)
-    ),
-    getSupabase()
-      .from('term_list')
-      .insert({ term_id: termId, user_id: userId, position: 1 } as unknown as never),
-  ]);
-  for (const result of results) {
-    if (result.error) throw result.error;
-  }
+  // Insert new term at the end
+  const { error: insertError } = await getSupabase()
+    .from('term_list')
+    .insert({ term_id: termId, user_id: userId, position: maxPosition + 1 } as unknown as never);
+  if (insertError) throw insertError;
 }
 
 export async function removeFromTermList(id: number, userId: string): Promise<void> {
