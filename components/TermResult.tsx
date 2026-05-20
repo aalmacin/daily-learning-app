@@ -9,6 +9,7 @@ import { regenerateTerm, deleteTerm, updateTermPriority } from '@/actions/terms'
 import { addToTermList, removeFromTermListByTermId } from '@/actions/termList'
 import { addToNotion } from '@/actions/notion'
 import { updateTermCategories, fetchCategories } from '@/actions/categories'
+import { CategoryMultiSelectDropdown } from '@/components/CategoryMultiSelectDropdown'
 import { queryKeys } from '@/lib/queryKeys'
 import type { Priority } from '@/lib/db'
 
@@ -113,13 +114,6 @@ function DoneTermCard({ term }: { term: DoneTermResult }) {
 
   const anyError = regenerateMutation.error ?? deleteMutation.error ?? notionMutation.error ?? priorityMutation.error ?? categoryMutation.error ?? addToListMutation.error ?? removeFromListMutation.error
 
-  function toggleCategory(cat: string) {
-    const next = term.categories.includes(cat)
-      ? term.categories.filter((c) => c !== cat)
-      : [...term.categories, cat]
-    categoryMutation.mutate(next)
-  }
-
   return (
     <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-6 flex flex-col gap-4">
       <div>
@@ -159,25 +153,21 @@ function DoneTermCard({ term }: { term: DoneTermResult }) {
         </div>
 
         {allCategories.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-2">
-            {allCategories.map((cat) => {
-              const selected = term.categories.includes(cat.name)
-              return (
-                <button
-                  key={cat.id}
-                  type="button"
-                  disabled={categoryMutation.isPending}
-                  onClick={() => toggleCategory(cat.name)}
-                  className={`px-3 py-1 rounded-full text-xs font-medium border transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
-                    selected
-                      ? 'bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 border-zinc-900 dark:border-zinc-50'
-                      : 'border-zinc-300 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 hover:border-zinc-400 dark:hover:border-zinc-500'
-                  }`}
-                >
-                  {cat.name}
-                </button>
-              )
-            })}
+          <div className="flex flex-wrap items-center gap-2 mt-2">
+            {term.categories.map((cat) => (
+              <span
+                key={cat}
+                className="px-3 py-1 rounded-full text-xs font-medium border bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 border-zinc-900 dark:border-zinc-50"
+              >
+                {cat}
+              </span>
+            ))}
+            <CategoryMultiSelectDropdown
+              categories={allCategories.map((c) => c.name)}
+              selected={term.categories}
+              onChange={(cats) => categoryMutation.mutate(cats)}
+              disabled={categoryMutation.isPending}
+            />
           </div>
         )}
       </div>
