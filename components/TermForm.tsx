@@ -10,11 +10,13 @@ type Mode = 'single' | 'multiple'
 
 export function TermForm() {
   const [mode, setMode] = useState<Mode>('single')
+  const [submitAttempted, setSubmitAttempted] = useState(false)
   const { recentContexts, saveContext } = useRecentContexts()
 
   const singleForm = useForm({
     defaultValues: { termName: '', context: '' },
     onSubmit: async ({ value }) => {
+      setSubmitAttempted(false)
       const name = value.termName.trim().toLowerCase()
       addPendingTerm(name)
       saveContext(value.context)
@@ -74,6 +76,7 @@ export function TermForm() {
         <form
           onSubmit={(e) => {
             e.preventDefault()
+            setSubmitAttempted(true)
             singleForm.handleSubmit()
           }}
           className="flex flex-col gap-4"
@@ -102,7 +105,7 @@ export function TermForm() {
                   placeholder="e.g. dependency injection"
                   className={inputClass}
                 />
-                {field.state.meta.errors.length > 0 && (
+                {submitAttempted && field.state.meta.errors.length > 0 && (
                   <p className="text-xs text-red-600 dark:text-red-400">{field.state.meta.errors[0]}</p>
                 )}
               </div>
