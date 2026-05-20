@@ -4,18 +4,21 @@ import { useForm } from '@tanstack/react-form'
 import { useState } from 'react'
 import { explainTerm } from '@/actions/explain'
 import { addPendingTerm, addPendingTerms, resolveTermResult, rejectTermResult } from '@/store/termStore'
+import { useRecentContexts } from '@/lib/useRecentContexts'
 
 type Mode = 'single' | 'multiple'
 
 export function TermForm() {
   const [mode, setMode] = useState<Mode>('single')
+  const { recentContexts, saveContext } = useRecentContexts()
 
   const singleForm = useForm({
     defaultValues: { termName: '', context: '' },
     onSubmit: async ({ value }) => {
       const name = value.termName.trim().toLowerCase()
       addPendingTerm(name)
-      singleForm.reset()
+      saveContext(value.context)
+      singleForm.setFieldValue('termName', '')
       explainTerm(value.termName, value.context || undefined)
         .then((term) => resolveTermResult(name, term))
         .catch((e) => rejectTermResult(name, e instanceof Error ? e.message : 'Something went wrong'))
@@ -32,7 +35,8 @@ export function TermForm() {
       if (terms.length === 0) return
       const names = terms.map((t) => t.toLowerCase())
       addPendingTerms(names)
-      multipleForm.reset()
+      saveContext(value.context)
+      multipleForm.setFieldValue('terms', '')
       terms.forEach((termName) => {
         const name = termName.toLowerCase()
         explainTerm(termName, value.context || undefined)
@@ -118,6 +122,7 @@ export function TermForm() {
                   onChange={(e) => field.handleChange(e.target.value)}
                   onBlur={field.handleBlur}
                   placeholder="e.g. Kubernetes, AWS, React"
+                  list="recent-contexts-list"
                   className={inputClass}
                 />
               </div>
@@ -187,6 +192,7 @@ export function TermForm() {
                   onChange={(e) => field.handleChange(e.target.value)}
                   onBlur={field.handleBlur}
                   placeholder="e.g. Kubernetes, AWS, React"
+                  list="recent-contexts-list"
                   className={inputClass}
                 />
               </div>
@@ -201,6 +207,12 @@ export function TermForm() {
           </button>
         </form>
       )}
+
+      <datalist id="recent-contexts-list">
+        {recentContexts.map((ctx) => (
+          <option key={ctx} value={ctx} />
+        ))}
+      </datalist>
     </div>
   )
 }
