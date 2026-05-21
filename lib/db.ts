@@ -391,17 +391,40 @@ export async function updateTermCategories(
 export const getTermById = cache(async (id: number): Promise<Term | null> => {
   const { data, error } = await getSupabase()
     .from('terms')
-    .select('*')
+    .select(
+      'id, name, content, created_at, updated_at, notion_page_id, notion_last_edited, last_synced_at, priority, daily_learning_done, notion_date, term_categories(categories(name)), concept_refinements!left(id)'
+    )
     .eq('id', id)
+    .not('concept_refinements.refinement_formatted_note', 'is', null)
     .maybeSingle();
   if (error) throw error;
   if (!data) return null;
-  const row = data as TermRow;
-  const [categories, explained] = await Promise.all([
-    getCategoriesForTerm(row.id),
-    isTermExplained(row.id),
-  ]);
-  return { ...row, categories, explained };
+
+  type JoinedRow = TermRow & {
+    term_categories: { categories: { name: string } | null }[];
+    concept_refinements: { id: number }[];
+  };
+
+  const row = data as unknown as JoinedRow;
+  const categories = row.term_categories
+    .map((tc) => tc.categories?.name)
+    .filter((name): name is string => name != null);
+  const explained = row.concept_refinements.length > 0;
+  return {
+    id: row.id,
+    name: row.name,
+    content: row.content,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    notion_page_id: row.notion_page_id,
+    notion_last_edited: row.notion_last_edited,
+    last_synced_at: row.last_synced_at,
+    priority: row.priority,
+    daily_learning_done: row.daily_learning_done,
+    notion_date: row.notion_date,
+    categories,
+    explained,
+  };
 });
 
 export const getRefinementsByTermId = cache(async (termId: number): Promise<ConceptRefinement[]> => {
