@@ -122,7 +122,8 @@ type TermsTableProps = {
   currentNotion: 'pending' | 'added' | 'all';
   currentPriority: Priority | 'all';
   currentDailyLearning: 'all' | 'done' | 'not-done';
-  currentSort: 'created_at' | 'name' | 'priority';
+  currentFlashcards: 'all' | 'with' | 'without';
+  currentSort: 'created_at' | 'name' | 'priority' | 'explained_at';
   currentDir: 'asc' | 'desc';
   timezone: string;
   initialTermListTermIds: Set<number>;
@@ -139,6 +140,7 @@ export function TermsTable({
   currentNotion,
   currentPriority,
   currentDailyLearning,
+  currentFlashcards,
   currentSort,
   currentDir,
   timezone,
@@ -176,7 +178,8 @@ export function TermsTable({
     notion: 'pending' | 'added' | 'all';
     priority: Priority | 'all';
     dailyLearning: 'all' | 'done' | 'not-done';
-    sort: 'created_at' | 'name' | 'priority';
+    flashcards: 'all' | 'with' | 'without';
+    sort: 'created_at' | 'name' | 'priority' | 'explained_at';
     dir: 'asc' | 'desc';
     page: number;
     pageSize: number;
@@ -187,6 +190,7 @@ export function TermsTable({
       notion: currentNotion,
       priority: currentPriority,
       dailyLearning: currentDailyLearning,
+      flashcards: currentFlashcards,
       sort: currentSort,
       dir: currentDir,
       page: currentPage,
@@ -199,6 +203,7 @@ export function TermsTable({
     if (merged.notion !== 'all') params.set('notion', merged.notion);
     if (merged.priority !== 'all') params.set('priority', merged.priority);
     if (merged.dailyLearning !== 'all') params.set('dailyLearning', merged.dailyLearning);
+    if (merged.flashcards !== 'all') params.set('flashcards', merged.flashcards);
     if (merged.sort !== 'created_at') params.set('sort', merged.sort);
     if (merged.dir !== 'desc') params.set('dir', merged.dir);
     if (merged.page !== 1) params.set('page', String(merged.page));
@@ -219,7 +224,7 @@ export function TermsTable({
     }, 300);
   }
 
-  function handleSort(column: 'created_at' | 'name' | 'priority') {
+  function handleSort(column: 'created_at' | 'name' | 'priority' | 'explained_at') {
     const newDir = currentSort === column && currentDir === 'desc' ? 'asc' : 'desc';
     navigate({ sort: column, dir: newDir, page: 1 });
   }
@@ -282,7 +287,7 @@ export function TermsTable({
 
   const sortableHeader = (
     label: string,
-    column: 'created_at' | 'name' | 'priority',
+    column: 'created_at' | 'name' | 'priority' | 'explained_at',
   ) => (
     <button
       onClick={() => handleSort(column)}
@@ -346,17 +351,30 @@ export function TermsTable({
           </Link>
         ),
       }),
-      columnHelper.accessor('created_at', {
+      columnHelper.accessor('explained_at', {
         meta: { mobileHidden: true },
-        header: () => sortableHeader('Created', 'created_at'),
+        header: () => sortableHeader('Explained date', 'explained_at'),
         enableSorting: false,
-        cell: (info) =>
-          new Date(info.getValue()).toLocaleDateString('en-US', {
+        cell: (info) => {
+          const val = info.getValue();
+          if (!val) return <span className="text-zinc-400">—</span>;
+          const [y, m, d] = val.split('T')[0].split('-').map(Number);
+          return new Date(y, m - 1, d).toLocaleDateString('en-US', {
             year: 'numeric',
             month: 'short',
             day: 'numeric',
-            timeZone: timezone,
-          }),
+          });
+        },
+      }),
+      columnHelper.accessor('flashcard_count', {
+        meta: { mobileHidden: true },
+        header: 'Flashcards',
+        enableSorting: false,
+        cell: (info) => (
+          <span className={info.getValue() > 0 ? 'text-zinc-700 dark:text-zinc-300' : 'text-zinc-400'}>
+            {info.getValue()}
+          </span>
+        ),
       }),
       columnHelper.accessor('priority', {
         meta: { mobileHidden: true },
@@ -559,6 +577,21 @@ export function TermsTable({
                 }`}
               >
                 {val === 'done' ? 'Learning done' : val === 'not-done' ? 'Learning pending' : 'All learning'}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-1 border border-zinc-200 dark:border-zinc-700 rounded-lg overflow-hidden">
+            {(['all', 'with', 'without'] as const).map((val) => (
+              <button
+                key={val}
+                onClick={() => navigate({ flashcards: val, page: 1 })}
+                className={`px-3 py-2 text-xs font-medium transition-colors ${
+                  currentFlashcards === val
+                    ? 'bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900'
+                    : 'bg-white dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800'
+                }`}
+              >
+                {val === 'with' ? 'With flashcards' : val === 'without' ? 'No flashcards' : 'All flashcards'}
               </button>
             ))}
           </div>
