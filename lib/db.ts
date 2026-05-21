@@ -23,6 +23,8 @@ export type Term = {
   last_synced_at: string | null;
   priority: Priority;
   explained: boolean;
+  explained_at: string | null;
+  flashcard_count: number;
   daily_learning_done: boolean;
   notion_date: string | null;
 };
@@ -55,7 +57,8 @@ export type TermsQuery = {
   notion?: 'pending' | 'added' | 'all';
   priority?: Priority | 'all';
   dailyLearning?: 'all' | 'done' | 'not-done';
-  sort?: 'created_at' | 'name' | 'priority';
+  flashcards?: 'all' | 'with' | 'without';
+  sort?: 'created_at' | 'name' | 'priority' | 'explained_at';
   dir?: 'asc' | 'desc';
 };
 
@@ -64,7 +67,7 @@ export type TermsPage = {
   total: number;
 };
 
-type TermRow = Omit<Term, 'categories' | 'explained'>;
+type TermRow = Omit<Term, 'categories' | 'explained' | 'explained_at' | 'flashcard_count'>;
 
 let _supabase: ReturnType<typeof createClient> | null = null;
 
@@ -155,6 +158,7 @@ export async function getTermsPaginated({
   notion,
   priority,
   dailyLearning,
+  flashcards,
   sort = 'created_at',
   dir = 'desc',
 }: TermsQuery): Promise<TermsPage> {
@@ -181,7 +185,26 @@ export async function getTermsPaginated({
     if (termIdFilter.length === 0) return { terms: [], total: 0 };
   }
 
-  // Use a single query with joined categories and count
+  // Resolve flashcard filter
+  let flashcardTermIds: number[] | null = null;
+  if (flashcards && flashcards !== 'all') {
+    const { data: fcTerms, error: fcError } = await getSupabase()
+      .from('flashcards')
+      .select('term_id')
+      .eq('user_id', userId);
+    if (fcError) throw fcError;
+    flashcardTermIds = [...new Set((fcTerms as { term_id: number }[]).map((r) => r.term_id))];
+  }
+
+  type JoinedRow = TermRow & {
+    term_categories: { categories: { name: string } | null }[];
+    concept_refinements: { term_id: number }[];
+  };
+
+  let rows: JoinedRow[];
+  let total: number;
+
+  const sortColumn = sort === 'explained_at' ? 'notion_date' : sort;
   let query = getSupabase()
     .from('terms')
     .select('*, term_categories(categories(name)), concept_refinements!left(term_id)', { count: 'exact' })
@@ -193,30 +216,47 @@ export async function getTermsPaginated({
   if (dailyLearning === 'done') query = query.eq('daily_learning_done', true);
   if (dailyLearning === 'not-done') query = query.eq('daily_learning_done', false);
   if (termIdFilter !== null) query = query.in('id', termIdFilter);
-  query = query
-    .not('concept_refinements.refinement_formatted_note', 'is', null)
-    .order(sort, { ascending: dir === 'asc' })
-    .range(offset, offset + pageSize - 1);
+  if (flashcardTermIds !== null) {
+    if (flashcards === 'with') {
+      if (flashcardTermIds.length === 0) return { terms: [], total: 0 };
+      query = query.in('id', flashcardTermIds);
+    } else if (flashcards === 'without' && flashcardTermIds.length > 0) {
+      query = query.not('id', 'in', `(${flashcardTermIds.join(',')})`);
+    }
+  }
+  query = query.not('concept_refinements.refinement_formatted_note', 'is', null);
+  query = query.order(sortColumn, { ascending: dir === 'asc', nullsFirst: false }).range(offset, offset + pageSize - 1);
 
-  const { data: rows, count, error } = await query;
+  const { data: queryRows, count, error } = await query;
   if (error) throw error;
+  total = count ?? 0;
+  rows = (queryRows ?? []) as unknown as JoinedRow[];
+  if (rows.length === 0) return { terms: [], total };
 
-  const total = count ?? 0;
-  if (!rows || rows.length === 0) return { terms: [], total };
+  const termIds = rows.map((r) => r.id);
 
-  type JoinedRow = TermRow & {
-    term_categories: { categories: { name: string } | null }[];
-    concept_refinements: { term_id: number }[];
-  };
+  const { data: fcCountRows, error: fcCountError } = await getSupabase()
+    .from('flashcards')
+    .select('term_id')
+    .in('term_id', termIds)
+    .eq('user_id', userId);
+  if (fcCountError) throw fcCountError;
+
+  const flashcardCountMap = new Map<number, number>();
+  for (const row of fcCountRows as { term_id: number }[]) {
+    flashcardCountMap.set(row.term_id, (flashcardCountMap.get(row.term_id) ?? 0) + 1);
+  }
 
   return {
-    terms: (rows as unknown as JoinedRow[]).map((row) => {
+    terms: rows.map((row) => {
       const categories = row.term_categories
         .map((tc) => tc.categories?.name)
         .filter((name): name is string => name != null);
       const explained = row.concept_refinements.length > 0;
+      const explained_at = row.notion_date;
+      const flashcard_count = flashcardCountMap.get(row.id) ?? 0;
       const { term_categories: _, concept_refinements: __, ...termRow } = row;
-      return { ...termRow, categories, explained };
+      return { ...termRow, categories, explained, explained_at, flashcard_count };
     }),
     total,
   };
@@ -242,7 +282,7 @@ export async function getTerm(name: string, userId: string): Promise<Term | null
     getCategoriesForTerm(row.id),
     isTermExplained(row.id),
   ]);
-  return { ...row, categories, explained };
+  return { ...row, categories, explained, explained_at: null, flashcard_count: 0 };
 }
 
 export async function getAllTerms(userId: string): Promise<Term[]> {
@@ -284,10 +324,12 @@ export async function getAllTerms(userId: string): Promise<Term[]> {
     ...row,
     categories: catMap.get(row.id) ?? [],
     explained: explainedIds.has(row.id),
+    explained_at: null,
+    flashcard_count: 0,
   }));
 }
 
-export async function insertTerm(term: Omit<Term, 'id' | 'created_at' | 'explained'>, userId: string): Promise<Term> {
+export async function insertTerm(term: Omit<Term, 'id' | 'created_at' | 'explained' | 'explained_at' | 'flashcard_count'>, userId: string): Promise<Term> {
   const { data, error } = await getSupabase()
     .from('terms')
     .insert({
@@ -304,7 +346,7 @@ export async function insertTerm(term: Omit<Term, 'id' | 'created_at' | 'explain
   const row = data as TermRow;
   const categoryIds = await upsertCategories(term.categories, userId);
   await setTermCategories(row.id, categoryIds);
-  return { ...row, categories: term.categories, explained: false };
+  return { ...row, categories: term.categories, explained: false, explained_at: null, flashcard_count: 0 };
 }
 
 export async function updateTerm(
@@ -345,11 +387,12 @@ export async function updateTerm(
     await setTermCategories(row.id, categoryIds);
   }
 
-  const [categories, explained] = await Promise.all([
+  const [categories, explained, explained_at] = await Promise.all([
     getCategoriesForTerm(row.id),
     isTermExplained(row.id),
+    getExplainedAtForTerm(row.id),
   ]);
-  return { ...row, categories, explained };
+  return { ...row, categories, explained, explained_at, flashcard_count: 0 };
 }
 
 export async function deleteTerm(id: number): Promise<void> {
@@ -424,6 +467,8 @@ export const getTermById = cache(async (id: number): Promise<Term | null> => {
     notion_date: row.notion_date,
     categories,
     explained,
+    explained_at: row.notion_date,
+    flashcard_count: 0,
   };
 });
 
@@ -662,12 +707,11 @@ export type TermListItem = {
 
 export async function getExplainedAtForTerm(termId: number): Promise<string | null> {
   const { data } = await getSupabase()
-    .from('term_explained_content')
-    .select('explained_at')
-    .eq('term_id', termId)
-    .order('created_at', { ascending: false })
-    .limit(1);
-  return (data as { explained_at: string }[] | null)?.[0]?.explained_at ?? null;
+    .from('terms')
+    .select('notion_date')
+    .eq('id', termId)
+    .maybeSingle();
+  return (data as { notion_date: string | null } | null)?.notion_date ?? null;
 }
 
 export async function getExplainedContent(
@@ -848,6 +892,8 @@ export async function getTermList(userId: string): Promise<TermListItem[]> {
       ...row.terms,
       categories: catMap.get(row.term_id) ?? [],
       explained: explainedIds.has(row.term_id),
+      explained_at: null,
+      flashcard_count: 0,
     },
   }));
 }

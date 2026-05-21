@@ -25,7 +25,9 @@ export default async function TermsPage({
   const notion: TermsQuery['notion'] =
     params.notion === 'added' || params.notion === 'pending' ? params.notion : 'all';
   const sort: TermsQuery['sort'] =
-    params.sort === 'name' || params.sort === 'priority' ? params.sort : 'created_at';
+    params.sort === 'name' || params.sort === 'priority' || params.sort === 'explained_at'
+      ? params.sort
+      : 'created_at';
   const dir: TermsQuery['dir'] = params.dir === 'asc' ? 'asc' : 'desc';
   const rawPriority = params.priority;
   const priority: Priority | 'all' =
@@ -35,6 +37,9 @@ export default async function TermsPage({
   const rawDailyLearning = params.dailyLearning;
   const dailyLearning: 'all' | 'done' | 'not-done' =
     rawDailyLearning === 'done' || rawDailyLearning === 'not-done' ? rawDailyLearning : 'all';
+  const rawFlashcards = params.flashcards;
+  const flashcards: 'all' | 'with' | 'without' =
+    rawFlashcards === 'with' || rawFlashcards === 'without' ? rawFlashcards : 'all';
   const rawPageSize = Number(params.pageSize);
   const pageSize = PAGE_SIZE_OPTIONS.includes(rawPageSize) ? rawPageSize : 10;
 
@@ -42,7 +47,7 @@ export default async function TermsPage({
   const userId = user!.id;
 
   const [{ terms, total }, categories, settings, termListIds] = await Promise.all([
-    getTermsPaginated({ userId, page, pageSize, q, categoryNames, notion, sort, dir, priority, dailyLearning }),
+    getTermsPaginated({ userId, page, pageSize, q, categoryNames, notion, sort, dir, priority, dailyLearning, flashcards }),
     getAllCategories(userId),
     getUserSettings(userId),
     getTermListTermIds(userId),
@@ -80,6 +85,7 @@ export default async function TermsPage({
           currentNotion={notion}
           currentPriority={priority}
           currentDailyLearning={dailyLearning}
+          currentFlashcards={flashcards}
           currentSort={sort}
           currentDir={dir}
           timezone={settings?.timezone ?? 'UTC'}
