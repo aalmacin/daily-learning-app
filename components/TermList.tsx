@@ -26,7 +26,7 @@ import type { TermListItem } from '@/lib/db';
 function formatDate(position: number): string {
   const date = new Date();
   date.setDate(date.getDate() + position); // position 1 = tomorrow
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 function DragHandle({ listeners, attributes }: {
