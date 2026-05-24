@@ -208,14 +208,14 @@ export async function updateNotionPageMetadata(
 export async function updateNotionPageDate(
   credentials: NotionCredentials,
   pageId: string,
-  date: string,
+  date: string | null,
 ): Promise<void> {
   const client = getClient(credentials);
   await throttleNotion();
   await client.pages.update({
     page_id: pageId,
     properties: {
-      Date: { date: { start: date } },
+      Date: { date: date ? { start: date } : null },
     },
   });
 }

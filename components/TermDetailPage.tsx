@@ -100,6 +100,21 @@ export function TermDetailPage({ term, initialRefinements, initialChats, explain
     });
   };
 
+  const handleResetDate = () => {
+    if (!confirm('Reset the explanation date? This will clear it in Notion as well.')) return;
+    setExplanationDate('');
+    setDateSaveStatus('saving');
+    startDate(async () => {
+      try {
+        await saveExplanationDate(term.id, null);
+        setDateSaveStatus('saved');
+        router.refresh();
+      } catch {
+        setDateSaveStatus('idle');
+      }
+    });
+  };
+
   const handleSubmitPre = () => {
     if (!preText.trim()) return;
     setError(null);
@@ -305,6 +320,15 @@ export function TermDetailPage({ term, initialRefinements, initialChats, explain
                 onChange={(e) => handleDateChange(e.target.value)}
                 className="px-3 py-1.5 text-sm border border-zinc-200 dark:border-zinc-700 rounded-lg bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:focus:ring-zinc-600"
               />
+              {explanationDate && (
+                <button
+                  type="button"
+                  onClick={handleResetDate}
+                  className="px-2 py-1 text-xs font-medium rounded border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                >
+                  Reset
+                </button>
+              )}
               {dateSaveStatus === 'saving' && (
                 <span className="text-xs text-zinc-400 dark:text-zinc-500">Saving…</span>
               )}

@@ -213,8 +213,8 @@ export async function getTermsPaginated({
   if (notion === 'pending') query = query.is('notion_page_id', null);
   if (notion === 'added') query = query.not('notion_page_id', 'is', null);
   if (priority && priority !== 'all') query = query.eq('priority', priority);
-  if (dailyLearning === 'done') query = query.eq('daily_learning_done', true);
-  if (dailyLearning === 'not-done') query = query.eq('daily_learning_done', false);
+  if (dailyLearning === 'done') query = query.not('notion_date', 'is', null);
+  if (dailyLearning === 'not-done') query = query.is('notion_date', null);
   if (termIdFilter !== null) query = query.in('id', termIdFilter);
   if (flashcardTermIds !== null) {
     if (flashcards === 'with') {
@@ -663,7 +663,7 @@ export async function clearNotionCredentials(userId: string): Promise<void> {
   if (error) throw error;
 }
 
-export async function setTermNotionDate(termId: number, date: string): Promise<void> {
+export async function setTermNotionDate(termId: number, date: string | null): Promise<void> {
   const { error } = await getSupabase()
     .from('terms')
     .update({ notion_date: date } as unknown as never)
