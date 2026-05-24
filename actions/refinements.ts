@@ -56,7 +56,7 @@ export async function submitRefinement(
   return updated;
 }
 
-export async function setExplanationDate(termId: number, date: string): Promise<void> {
+export async function setExplanationDate(termId: number, date: string | null): Promise<void> {
   const user = await getCurrentUser();
 
   await setTermNotionDate(termId, date);

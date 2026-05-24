@@ -663,7 +663,7 @@ export async function clearNotionCredentials(userId: string): Promise<void> {
   if (error) throw error;
 }
 
-export async function setTermNotionDate(termId: number, date: string): Promise<void> {
+export async function setTermNotionDate(termId: number, date: string | null): Promise<void> {
   const { error } = await getSupabase()
     .from('terms')
     .update({ notion_date: date } as unknown as never)
