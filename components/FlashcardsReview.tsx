@@ -37,8 +37,9 @@ export function FlashcardsReview({ categories }: Props) {
   }, [selectedCategories, loadCards]);
 
   const currentCard = cards[currentIndex] ?? null;
-  const dueCount = cards.filter((c) => c.next_review !== null).length;
-  const newCount = cards.filter((c) => c.next_review === null).length;
+  const remainingCards = cards.slice(currentIndex);
+  const dueCount = remainingCards.filter((c) => c.next_review !== null).length;
+  const newCount = remainingCards.filter((c) => c.next_review === null).length;
 
   const handleReview = (correct: boolean) => {
     if (!currentCard) return;
