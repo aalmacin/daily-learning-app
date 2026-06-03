@@ -1,6 +1,7 @@
 'use server';
 
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { redirect } from 'next/navigation';
 
 export async function signIn(formData: FormData) {
@@ -12,6 +13,9 @@ export async function signIn(formData: FormData) {
   });
 
   if (error) {
+    if (error.message.includes('Email not confirmed')) {
+      redirect('/login?error=Account+pending+admin+approval.');
+    }
     redirect('/login?error=Invalid+credentials');
   }
 
@@ -43,4 +47,33 @@ export async function setPassword(formData: FormData) {
   }
 
   redirect('/');
+}
+
+export async function signUp(formData: FormData) {
+  const email = formData.get('email') as string;
+  const password = formData.get('password') as string;
+  const confirm = formData.get('confirm') as string;
+
+  if (!email) {
+    redirect('/register?error=Email+is+required');
+  }
+  if (!password || password.length < 8) {
+    redirect('/register?error=Password+must+be+at+least+8+characters');
+  }
+  if (password !== confirm) {
+    redirect('/register?error=Passwords+do+not+match');
+  }
+
+  const supabase = createSupabaseAdminClient();
+  const { error } = await supabase.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: false,
+  });
+
+  if (error) {
+    redirect('/register?error=' + encodeURIComponent(error.message));
+  }
+
+  redirect('/login?info=Account+created.+Pending+admin+approval.');
 }

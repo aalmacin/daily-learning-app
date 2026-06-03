@@ -164,6 +164,12 @@
   },
   "active": "202aa09b2c14a135",
   "lastOpenFiles": [
+    "lib/supabase/admin.ts",
+    "app/register/page.tsx",
+    "app/register",
+    "docs/superpowers/plans/2026-06-02-public-registration.md",
+    "docs/superpowers/specs/2026-06-02-public-registration-design.md",
+    "supabase/templates/confirmation.html",
     "supabase/templates/invite.html",
     "supabase/templates",
     "app/set-password/page.tsx",
