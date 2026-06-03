@@ -1,16 +1,20 @@
+import Link from 'next/link';
 import { signIn } from '@/actions/auth';
 
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; info?: string }>;
 }) {
-  const { error } = await searchParams;
+  const { error, info } = await searchParams;
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black flex items-center justify-center p-8">
       <div className="w-full max-w-sm">
         <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50 mb-8">Sign in</h1>
+        {info && (
+          <p className="mb-4 text-sm text-emerald-700 dark:text-emerald-400">{info}</p>
+        )}
         {error && (
           <p className="mb-4 text-sm text-red-600 dark:text-red-400">{error}</p>
         )}
@@ -48,6 +52,12 @@ export default async function LoginPage({
             Sign in
           </button>
         </form>
+        <p className="mt-6 text-sm text-zinc-600 dark:text-zinc-400 text-center">
+          Need an account?{' '}
+          <Link href="/register" className="text-zinc-900 dark:text-zinc-50 hover:underline">
+            Register
+          </Link>
+        </p>
       </div>
     </div>
   );
