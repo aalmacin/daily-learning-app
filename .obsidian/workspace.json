@@ -164,6 +164,8 @@
   },
   "active": "202aa09b2c14a135",
   "lastOpenFiles": [
+    "supabase/templates/invite.html",
+    "supabase/templates",
     "app/set-password/page.tsx",
     "app/set-password",
     "app/auth/callback/route.ts",

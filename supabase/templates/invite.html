@@ -1,0 +1,5 @@
+<h2>You have been invited</h2>
+
+<p>You have been invited to create a user on {{ .SiteURL }}. Follow this link to accept the invite and set your password:</p>
+
+<p><a href="{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=invite&next=/set-password">Accept the invite</a></p>
