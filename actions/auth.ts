@@ -23,3 +23,24 @@ export async function signOut() {
   await supabase.auth.signOut();
   redirect('/login');
 }
+
+export async function setPassword(formData: FormData) {
+  const password = formData.get('password') as string;
+  const confirm = formData.get('confirm') as string;
+
+  if (!password || password.length < 8) {
+    redirect('/set-password?error=Password+must+be+at+least+8+characters');
+  }
+  if (password !== confirm) {
+    redirect('/set-password?error=Passwords+do+not+match');
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.auth.updateUser({ password });
+
+  if (error) {
+    redirect('/set-password?error=' + encodeURIComponent(error.message));
+  }
+
+  redirect('/');
+}
