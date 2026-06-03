@@ -20,6 +20,18 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Approving a Registered User
+
+New accounts created via `/register` are inactive until an admin sets `email_confirmed_at`. To approve a user, run the following in the Supabase **SQL Editor**:
+
+```sql
+UPDATE auth.users
+SET email_confirmed_at = now()
+WHERE email = 'user@example.com';
+```
+
+The user can now sign in at `/login`.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

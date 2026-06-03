@@ -1,6 +1,7 @@
 'use server';
 
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { redirect } from 'next/navigation';
 
 export async function signIn(formData: FormData) {
@@ -63,8 +64,12 @@ export async function signUp(formData: FormData) {
     redirect('/register?error=Passwords+do+not+match');
   }
 
-  const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.auth.signUp({ email, password });
+  const supabase = createSupabaseAdminClient();
+  const { error } = await supabase.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: false,
+  });
 
   if (error) {
     redirect('/register?error=' + encodeURIComponent(error.message));
