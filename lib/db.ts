@@ -1118,6 +1118,17 @@ function getStartOfDay(timezone?: string): Date {
   return new Date(`${dateStr}T00:00:00`);
 }
 
+export async function getTermIdsReviewedToday(userId: string, timezone?: string): Promise<number[]> {
+  const startOfToday = getStartOfDay(timezone);
+  const { data, error } = await getSupabase()
+    .from('flashcards')
+    .select('term_id')
+    .eq('user_id', userId)
+    .gte('last_reviewed', startOfToday.toISOString());
+  if (error) throw error;
+  return [...new Set((data as { term_id: number }[]).map((r) => r.term_id))];
+}
+
 
 export async function reviewFlashcard(id: number, userId: string, correct: boolean, timezone?: string): Promise<Flashcard> {
   const { data: card, error: fetchError } = await getSupabase()

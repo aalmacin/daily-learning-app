@@ -12,6 +12,7 @@ import {
   getFlashcardsByTermId,
   getAllCategories,
   getUserSettings,
+  getTermIdsReviewedToday,
   type Flashcard,
 } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
@@ -59,13 +60,15 @@ export async function getReviewCards(categoryNames?: string[]): Promise<{
 }> {
   const user = await getCurrentUser();
   if (!user) throw new Error('Not authenticated');
-  const [allDue, allNew] = await Promise.all([
+  const settings = await getUserSettings(user.id);
+  const [allDue, allNew, reviewedTodayTermIds] = await Promise.all([
     getDueFlashcards(user.id, categoryNames),
     getNewFlashcards(user.id, categoryNames),
+    getTermIdsReviewedToday(user.id, settings?.timezone),
   ]);
 
-  // One card per term: due cards first, then new cards fill remaining terms
-  const seenTerms = new Set<number>();
+  // One card per term per day: skip terms whose cards were already reviewed today
+  const seenTerms = new Set<number>(reviewedTodayTermIds);
   const due: (Flashcard & { term_name: string })[] = [];
   for (const card of allDue) {
     if (!seenTerms.has(card.term_id)) {
