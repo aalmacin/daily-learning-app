@@ -164,6 +164,12 @@
   },
   "active": "202aa09b2c14a135",
   "lastOpenFiles": [
+    "components/GlobalSearch.tsx",
+    "components/SearchPanel.tsx",
+    "components/SearchFAB.tsx",
+    "store/searchStore.ts",
+    "docs/superpowers/plans/2026-06-07-global-search-fab.md",
+    "docs/superpowers/specs/2026-06-07-global-search-design.md",
     "lib/supabase/admin.ts",
     "app/register/page.tsx",
     "app/register",
@@ -173,10 +179,6 @@
     "supabase/templates/invite.html",
     "supabase/templates",
     "app/set-password/page.tsx",
-    "app/set-password",
-    "app/auth/callback/route.ts",
-    "app/auth/callback",
-    "app/auth",
     "docs/superpowers/plans/2026-05-31-registration.md"
   ]
 }

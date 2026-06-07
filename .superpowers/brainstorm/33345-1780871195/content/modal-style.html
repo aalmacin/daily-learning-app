@@ -1,0 +1,56 @@
+<h2>How should the modal appear?</h2>
+<p class="subtitle">The modal contains TermForm + TermResult (same as homepage)</p>
+
+<div class="options">
+  <div class="option" data-choice="centered" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Centered overlay</h3>
+      <p>Classic centered modal with a backdrop. Scrollable internally. Familiar pattern, works well on all screen sizes.</p>
+      <div style="margin-top:1rem; position:relative; height:140px; background:var(--bg-tertiary); border-radius:8px; overflow:hidden;">
+        <div style="position:absolute;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;">
+          <div style="background:var(--bg-secondary);border-radius:10px;width:70%;height:90px;padding:10px;display:flex;flex-direction:column;gap:6px;box-shadow:0 8px 32px rgba(0,0,0,0.3);">
+            <div style="height:10px;width:60%;background:var(--bg-tertiary);border-radius:4px;"></div>
+            <div style="height:8px;width:90%;background:var(--bg-tertiary);border-radius:4px;"></div>
+            <div style="height:8px;width:80%;background:var(--bg-tertiary);border-radius:4px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="right-panel" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Right slide-in panel</h3>
+      <p>Slides in from the right edge. Content stays visible behind it. Good for reference while browsing other pages.</p>
+      <div style="margin-top:1rem; position:relative; height:140px; background:var(--bg-tertiary); border-radius:8px; overflow:hidden;">
+        <div style="position:absolute;top:0;left:0;right:0;height:22px;background:var(--bg-secondary);border-bottom:1px solid var(--border);font-size:0.6rem;padding:4px 8px;">DailyLearning</div>
+        <div style="position:absolute;top:22px;right:0;bottom:0;width:55%;background:var(--bg-secondary);border-left:1px solid var(--border);padding:8px;display:flex;flex-direction:column;gap:5px;box-shadow:-4px 0 16px rgba(0,0,0,0.15);">
+          <div style="height:9px;width:70%;background:var(--bg-tertiary);border-radius:4px;"></div>
+          <div style="height:7px;width:90%;background:var(--bg-tertiary);border-radius:4px;"></div>
+          <div style="height:7px;width:80%;background:var(--bg-tertiary);border-radius:4px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="fullscreen" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Full-screen takeover</h3>
+      <p>Covers the entire screen like a page. Most space for results. Feels like navigating to a separate view, especially on mobile.</p>
+      <div style="margin-top:1rem; position:relative; height:140px; background:var(--bg-tertiary); border-radius:8px; overflow:hidden;">
+        <div style="position:absolute;inset:0;background:var(--bg-secondary);padding:10px;display:flex;flex-direction:column;gap:6px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+            <div style="height:9px;width:40%;background:var(--bg-tertiary);border-radius:4px;"></div>
+            <div style="font-size:0.7rem;color:var(--text-secondary);">✕ Close</div>
+          </div>
+          <div style="height:8px;width:90%;background:var(--bg-tertiary);border-radius:4px;"></div>
+          <div style="height:8px;width:75%;background:var(--bg-tertiary);border-radius:4px;"></div>
+          <div style="height:8px;width:85%;background:var(--bg-tertiary);border-radius:4px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

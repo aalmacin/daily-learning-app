@@ -1,0 +1,51 @@
+<h2>Updated design — 65% width panel</h2>
+<p class="subtitle">Panel takes 65% of screen on sm+, full-width on mobile</p>
+
+<div class="section">
+  <h3>Panel layout (desktop)</h3>
+  <div style="position:relative;height:300px;background:var(--bg-tertiary);border-radius:10px;overflow:hidden;margin-top:0.75rem;">
+    <!-- Page content (dimmed, 35% of screen) -->
+    <div style="position:absolute;inset:0;padding:20px;opacity:0.3;">
+      <div style="height:12px;width:50%;background:var(--bg-secondary);border-radius:4px;margin-bottom:12px;"></div>
+      <div style="height:8px;width:90%;background:var(--bg-secondary);border-radius:4px;margin-bottom:8px;"></div>
+      <div style="height:8px;width:75%;background:var(--bg-secondary);border-radius:4px;margin-bottom:8px;"></div>
+    </div>
+    <!-- Width label -->
+    <div style="position:absolute;top:10px;left:10px;font-size:0.65rem;color:var(--text-tertiary);background:var(--bg-secondary);padding:2px 8px;border-radius:4px;border:1px solid var(--border);">35% — page</div>
+    <!-- Backdrop -->
+    <div style="position:absolute;inset:0;background:rgba(0,0,0,0.18);pointer-events:none;"></div>
+    <!-- Panel (65%) -->
+    <div style="position:absolute;top:0;right:0;bottom:0;width:65%;background:var(--bg-secondary);border-left:1px solid var(--border);box-shadow:-6px 0 20px rgba(0,0,0,0.15);display:flex;flex-direction:column;">
+      <div style="position:absolute;top:10px;left:10px;font-size:0.65rem;color:var(--accent);background:var(--bg-secondary);padding:2px 8px;border-radius:4px;border:1px solid var(--accent);z-index:1;">65% — panel</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--border);">
+        <span style="font-size:0.82rem;font-weight:600;color:var(--text-primary);">Explain a Term</span>
+        <div style="width:22px;height:22px;border-radius:5px;background:var(--bg-tertiary);display:flex;align-items:center;justify-content:center;font-size:0.7rem;color:var(--text-secondary);">✕</div>
+      </div>
+      <div style="padding:14px;flex:1;display:flex;flex-direction:column;gap:10px;overflow:hidden;">
+        <div style="background:var(--bg-primary);border:1px solid var(--border);border-radius:8px;padding:10px;">
+          <div style="font-size:0.65rem;color:var(--text-secondary);margin-bottom:6px;">TermForm</div>
+          <div style="height:6px;width:80%;background:var(--bg-tertiary);border-radius:3px;margin-bottom:6px;"></div>
+          <div style="height:6px;width:65%;background:var(--bg-tertiary);border-radius:3px;"></div>
+        </div>
+        <div style="background:var(--bg-primary);border:1px solid var(--border);border-radius:8px;padding:10px;">
+          <div style="font-size:0.65rem;color:var(--text-secondary);margin-bottom:6px;">TermResult</div>
+          <div style="height:6px;width:90%;background:var(--bg-tertiary);border-radius:3px;margin-bottom:6px;"></div>
+          <div style="height:6px;width:70%;background:var(--bg-tertiary);border-radius:3px;"></div>
+        </div>
+      </div>
+    </div>
+    <!-- FAB -->
+    <div style="position:absolute;bottom:14px;right:calc(65% + 14px);width:40px;height:40px;border-radius:50%;background:#0071e3;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1rem;box-shadow:0 3px 10px rgba(0,0,0,0.3);">✕</div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Updated sizing</h3>
+  <ul style="font-size:0.85rem;color:var(--text-secondary);line-height:1.9;list-style:disc;padding-left:1.2rem;margin-top:0.5rem;">
+    <li>Panel: <strong>full-width on mobile</strong>, <strong>65vw on sm+</strong></li>
+    <li>FAB: <strong>52px circle</strong>, fixed <code>bottom-6 right-6</code></li>
+    <li>State persists — panel never unmounts, form values survive toggle</li>
+    <li>Escape key closes panel</li>
+    <li>Mobile backdrop clickable to close; desktop backdrop <code>pointer-events-none</code></li>
+  </ul>
+</div>

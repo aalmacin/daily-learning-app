@@ -1,0 +1,16 @@
+{"type":"server-started","port":55432,"host":"127.0.0.1","url_host":"localhost","url":"http://localhost:55432","screen_dir":"/Users/aalmacin/Projects/daily-learning-worktree/setup-termlist/.superpowers/brainstorm/33345-1780871195/content","state_dir":"/Users/aalmacin/Projects/daily-learning-worktree/setup-termlist/.superpowers/brainstorm/33345-1780871195/state"}
+{"type":"screen-added","file":"/Users/aalmacin/Projects/daily-learning-worktree/setup-termlist/.superpowers/brainstorm/33345-1780871195/content/waiting.html"}
+{"type":"screen-added","file":"/Users/aalmacin/Projects/daily-learning-worktree/setup-termlist/.superpowers/brainstorm/33345-1780871195/content/waiting-2.html"}
+{"type":"screen-added","file":"/Users/aalmacin/Projects/daily-learning-worktree/setup-termlist/.superpowers/brainstorm/33345-1780871195/content/fab-placement.html"}
+{"source":"user-event","type":"click","text":"A\n    \n      Bottom-right (classic FAB)\n      Fixed to bottom-right corner. Standard Material Design pattern, stays out of content flow, thumb-friendly on mobile.\n      \n        DailyLearning    Terms · Flashcards\n        🔍","choice":"bottom-right","id":null,"timestamp":1780871533986}
+{"type":"screen-added","file":"/Users/aalmacin/Projects/daily-learning-worktree/setup-termlist/.superpowers/brainstorm/33345-1780871195/content/modal-style.html"}
+{"source":"user-event","type":"click","text":"B\n    \n      Right slide-in panel\n      Slides in from the right edge. Content stays visible behind it. Good for reference while browsing other pages.\n      \n        DailyLearning","choice":"right-panel","id":null,"timestamp":1780871637366}
+{"source":"user-event","type":"click","text":"B\n    \n      Right slide-in panel\n      Slides in from the right edge. Content stays visible behind it. Good for reference while browsing other pages.\n      \n        DailyLearning","choice":"right-panel","id":null,"timestamp":1780871717281}
+{"source":"user-event","type":"click","text":"B\n    \n      Right slide-in panel\n      Slides in from the right edge. Content stays visible behind it. Good for reference while browsing other pages.\n      \n        DailyLearning","choice":"right-panel","id":null,"timestamp":1780871737399}
+{"type":"screen-added","file":"/Users/aalmacin/Projects/daily-learning-worktree/setup-termlist/.superpowers/brainstorm/33345-1780871195/content/waiting-3.html"}
+{"type":"screen-added","file":"/Users/aalmacin/Projects/daily-learning-worktree/setup-termlist/.superpowers/brainstorm/33345-1780871195/content/panel-design.html"}
+{"type":"screen-added","file":"/Users/aalmacin/Projects/daily-learning-worktree/setup-termlist/.superpowers/brainstorm/33345-1780871195/content/waiting-4.html"}
+{"type":"screen-added","file":"/Users/aalmacin/Projects/daily-learning-worktree/setup-termlist/.superpowers/brainstorm/33345-1780871195/content/design-overview.html"}
+{"type":"screen-added","file":"/Users/aalmacin/Projects/daily-learning-worktree/setup-termlist/.superpowers/brainstorm/33345-1780871195/content/design-overview-v2.html"}
+{"type":"screen-added","file":"/Users/aalmacin/Projects/daily-learning-worktree/setup-termlist/.superpowers/brainstorm/33345-1780871195/content/design-overview-v3.html"}
+{"type":"server-stopped","reason":"idle timeout"}
