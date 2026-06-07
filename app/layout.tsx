@@ -18,13 +18,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Notemaker",
-  description: "Personal note-making app",
+  title: "DailyLearning",
+  description: "Personal daily learning app",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Notemaker",
+    title: "DailyLearning",
   },
 };
 
