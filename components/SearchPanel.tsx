@@ -30,9 +30,9 @@ export function SearchPanel() {
       <div
         role="dialog"
         aria-label="Explain a term"
-        aria-modal="true"
+        aria-modal={isOpen || undefined}
         aria-hidden={!isOpen}
-        className={`fixed top-0 right-0 bottom-0 z-50 w-full sm:w-[65vw] bg-white dark:bg-zinc-900 border-l border-zinc-200 dark:border-zinc-800 shadow-2xl flex flex-col transition-transform duration-300 ease-in-out ${
+        className={`fixed top-0 right-0 bottom-0 z-[55] w-full sm:w-[65vw] bg-white dark:bg-zinc-900 border-l border-zinc-200 dark:border-zinc-800 shadow-2xl flex flex-col transition-transform duration-300 ease-in-out ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
