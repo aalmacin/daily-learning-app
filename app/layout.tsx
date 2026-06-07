@@ -56,7 +56,7 @@ export default async function RootLayout({
             {user && (
               <>
                 <div className="flex-1" />
-                <Suspense>
+                <Suspense fallback={<div className="min-w-[120px] max-w-[280px] w-[30%]" />}>
                   <SearchBar />
                 </Suspense>
                 <NavMenu />
