@@ -1,0 +1,79 @@
+<h2>Search panel design</h2>
+<p class="subtitle">Right slide-in panel — does this layout feel right?</p>
+
+<div class="mockup" style="max-width:700px;margin:0 auto;">
+  <div class="mockup-header">Full page with panel open</div>
+  <div class="mockup-body" style="position:relative;height:420px;overflow:hidden;display:flex;">
+
+    <!-- Main page content (dimmed) -->
+    <div style="flex:1;padding:20px;opacity:0.35;pointer-events:none;">
+      <div style="height:12px;width:50%;background:var(--bg-tertiary);border-radius:4px;margin-bottom:16px;"></div>
+      <div style="height:8px;width:90%;background:var(--bg-tertiary);border-radius:4px;margin-bottom:8px;"></div>
+      <div style="height:8px;width:80%;background:var(--bg-tertiary);border-radius:4px;margin-bottom:8px;"></div>
+      <div style="height:8px;width:75%;background:var(--bg-tertiary);border-radius:4px;margin-bottom:8px;"></div>
+      <div style="height:8px;width:85%;background:var(--bg-tertiary);border-radius:4px;margin-bottom:24px;"></div>
+      <div style="height:8px;width:60%;background:var(--bg-tertiary);border-radius:4px;margin-bottom:8px;"></div>
+      <div style="height:8px;width:70%;background:var(--bg-tertiary);border-radius:4px;"></div>
+    </div>
+
+    <!-- Subtle backdrop overlay -->
+    <div style="position:absolute;inset:0;background:rgba(0,0,0,0.2);pointer-events:none;"></div>
+
+    <!-- Slide-in panel -->
+    <div style="position:absolute;top:0;right:0;bottom:0;width:320px;background:var(--bg-secondary);border-left:1px solid var(--border);box-shadow:-8px 0 24px rgba(0,0,0,0.15);display:flex;flex-direction:column;overflow:hidden;">
+
+      <!-- Panel header -->
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border);flex-shrink:0;">
+        <span style="font-weight:600;font-size:0.9rem;color:var(--text-primary);">Explain a Term</span>
+        <button style="width:28px;height:28px;border-radius:6px;background:var(--bg-tertiary);border:none;color:var(--text-secondary);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.9rem;">✕</button>
+      </div>
+
+      <!-- Panel scrollable body -->
+      <div style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:14px;">
+
+        <!-- TermForm mockup -->
+        <div style="background:var(--bg-primary);border:1px solid var(--border);border-radius:10px;padding:14px;">
+          <div style="display:flex;gap:0;margin-bottom:12px;border-bottom:1px solid var(--border);">
+            <div style="padding:6px 14px;font-size:0.75rem;border-bottom:2px solid var(--text-primary);color:var(--text-primary);font-weight:500;">Single</div>
+            <div style="padding:6px 14px;font-size:0.75rem;border-bottom:2px solid transparent;color:var(--text-secondary);">Multiple</div>
+          </div>
+          <div style="margin-bottom:10px;">
+            <div style="font-size:0.72rem;color:var(--text-secondary);margin-bottom:4px;">Term</div>
+            <div style="height:28px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;"></div>
+          </div>
+          <div style="margin-bottom:12px;">
+            <div style="font-size:0.72rem;color:var(--text-secondary);margin-bottom:4px;">Context <span style="opacity:0.6;">(optional)</span></div>
+            <div style="height:28px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;"></div>
+          </div>
+          <div style="height:28px;width:70px;background:var(--text-primary);border-radius:6px;"></div>
+        </div>
+
+        <!-- TermResult mockup -->
+        <div style="background:var(--bg-primary);border:1px solid var(--border);border-radius:10px;padding:14px;">
+          <div style="height:10px;width:55%;background:var(--bg-tertiary);border-radius:4px;margin-bottom:8px;"></div>
+          <div style="height:7px;width:90%;background:var(--bg-tertiary);border-radius:4px;margin-bottom:6px;"></div>
+          <div style="height:7px;width:80%;background:var(--bg-tertiary);border-radius:4px;"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- FAB (bottom right, above panel) -->
+    <div style="position:absolute;bottom:16px;right:336px;width:44px;height:44px;border-radius:50%;background:#0071e3;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.1rem;box-shadow:0 4px 12px rgba(0,0,0,0.3);cursor:pointer;" title="FAB — click to close panel">
+      ✕
+    </div>
+
+  </div>
+</div>
+
+<div style="margin-top:1.5rem;max-width:700px;margin-left:auto;margin-right:auto;">
+  <h3 style="margin-bottom:0.75rem;">Key details</h3>
+  <ul style="color:var(--text-secondary);font-size:0.9rem;line-height:1.8;list-style:disc;padding-left:1.25rem;">
+    <li>Panel: <strong>400px wide</strong> on desktop, <strong>full-width</strong> on mobile</li>
+    <li>FAB shows <strong>search icon</strong> when closed, <strong>✕</strong> when open</li>
+    <li>Subtle backdrop behind panel (doesn't block interaction with page)</li>
+    <li>Panel header has title + close button</li>
+    <li>Panel body scrolls independently</li>
+    <li>TermForm + TermResult reused as-is — no changes needed</li>
+  </ul>
+</div>

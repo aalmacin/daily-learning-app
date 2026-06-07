@@ -1,0 +1,42 @@
+<h2>Where should the FAB live?</h2>
+<p class="subtitle">Pick the placement that feels most natural for a search trigger</p>
+
+<div class="options">
+  <div class="option" data-choice="bottom-right" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Bottom-right (classic FAB)</h3>
+      <p>Fixed to bottom-right corner. Standard Material Design pattern, stays out of content flow, thumb-friendly on mobile.</p>
+      <div style="margin-top:1rem; position:relative; height:120px; background:var(--bg-tertiary); border-radius:8px; overflow:hidden;">
+        <div class="mock-nav" style="position:absolute;top:0;left:0;right:0;font-size:0.7rem;padding:6px 10px;">DailyLearning &nbsp;&nbsp; Terms · Flashcards</div>
+        <div style="position:absolute;bottom:12px;right:12px;width:40px;height:40px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.1rem;box-shadow:0 2px 8px rgba(0,0,0,0.25);">🔍</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="bottom-center" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Bottom-center</h3>
+      <p>Centered at the bottom. More prominent, feels like a primary action bar. Good on mobile, slightly unusual on desktop.</p>
+      <div style="margin-top:1rem; position:relative; height:120px; background:var(--bg-tertiary); border-radius:8px; overflow:hidden;">
+        <div class="mock-nav" style="position:absolute;top:0;left:0;right:0;font-size:0.7rem;padding:6px 10px;">DailyLearning &nbsp;&nbsp; Terms · Flashcards</div>
+        <div style="position:absolute;bottom:12px;left:50%;transform:translateX(-50%);width:40px;height:40px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.1rem;box-shadow:0 2px 8px rgba(0,0,0,0.25);">🔍</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="header" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Search icon in header</h3>
+      <p>A search icon button in the top header bar, next to the nav. Familiar web pattern, not a floating button but always accessible.</p>
+      <div style="margin-top:1rem; position:relative; height:120px; background:var(--bg-tertiary); border-radius:8px; overflow:hidden;">
+        <div style="position:absolute;top:0;left:0;right:0;background:var(--bg-secondary);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:6px 10px;font-size:0.7rem;">
+          <span>DailyLearning</span>
+          <span style="display:flex;align-items:center;gap:8px;">Terms · Flashcards &nbsp; <span style="width:24px;height:24px;border-radius:6px;background:var(--bg-tertiary);display:inline-flex;align-items:center;justify-content:center;">🔍</span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

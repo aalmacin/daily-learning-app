@@ -1,0 +1,64 @@
+<h2>Updated — centred content inside panel</h2>
+<p class="subtitle">Panel is 65vw, content inside has max-width and is centred</p>
+
+<div class="section">
+  <h3>Panel interior layout</h3>
+  <div style="position:relative;height:320px;background:var(--bg-tertiary);border-radius:10px;overflow:hidden;margin-top:0.75rem;">
+    <!-- Dimmed page (35%) -->
+    <div style="position:absolute;inset:0;padding:20px;opacity:0.3;">
+      <div style="height:12px;width:50%;background:var(--bg-secondary);border-radius:4px;margin-bottom:12px;"></div>
+      <div style="height:8px;width:80%;background:var(--bg-secondary);border-radius:4px;margin-bottom:8px;"></div>
+    </div>
+    <div style="position:absolute;top:10px;left:10px;font-size:0.62rem;color:var(--text-tertiary);background:var(--bg-secondary);padding:2px 7px;border-radius:4px;border:1px solid var(--border);">35%</div>
+    <!-- Backdrop -->
+    <div style="position:absolute;inset:0;background:rgba(0,0,0,0.18);pointer-events:none;"></div>
+    <!-- Panel (65%) -->
+    <div style="position:absolute;top:0;right:0;bottom:0;width:65%;background:var(--bg-secondary);border-left:1px solid var(--border);box-shadow:-6px 0 20px rgba(0,0,0,0.15);display:flex;flex-direction:column;overflow:hidden;">
+      <!-- Header -->
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);flex-shrink:0;">
+        <span style="font-size:0.8rem;font-weight:600;color:var(--text-primary);">Explain a Term</span>
+        <div style="width:20px;height:20px;border-radius:4px;background:var(--bg-tertiary);display:flex;align-items:center;justify-content:center;font-size:0.65rem;color:var(--text-secondary);">✕</div>
+      </div>
+      <!-- Scrollable body -->
+      <div style="flex:1;overflow-y:auto;padding:14px 20px;">
+        <!-- Centred content with max-width -->
+        <div style="max-width:480px;margin:0 auto;display:flex;flex-direction:column;gap:10px;">
+          <!-- Empty space indicators -->
+          <div style="display:flex;gap:6px;align-items:stretch;height:100%;">
+            <div style="width:16px;background:repeating-linear-gradient(135deg,transparent,transparent 4px,rgba(0,113,227,0.12) 4px,rgba(0,113,227,0.12) 8px);border-radius:3px;border:1px dashed rgba(0,113,227,0.25);flex-shrink:0;" title="empty side space"></div>
+            <div style="flex:1;display:flex;flex-direction:column;gap:10px;">
+              <!-- TermForm -->
+              <div style="background:var(--bg-primary);border:1px solid var(--border);border-radius:8px;padding:10px;">
+                <div style="font-size:0.62rem;color:var(--accent);margin-bottom:6px;font-weight:500;">TermForm (centred)</div>
+                <div style="height:6px;width:80%;background:var(--bg-tertiary);border-radius:3px;margin-bottom:5px;"></div>
+                <div style="height:6px;width:65%;background:var(--bg-tertiary);border-radius:3px;margin-bottom:5px;"></div>
+                <div style="height:18px;width:50px;background:var(--text-primary);border-radius:4px;margin-top:8px;"></div>
+              </div>
+              <!-- TermResult -->
+              <div style="background:var(--bg-primary);border:1px solid var(--border);border-radius:8px;padding:10px;">
+                <div style="font-size:0.62rem;color:var(--accent);margin-bottom:6px;font-weight:500;">TermResult (centred)</div>
+                <div style="height:6px;width:90%;background:var(--bg-tertiary);border-radius:3px;margin-bottom:5px;"></div>
+                <div style="height:6px;width:70%;background:var(--bg-tertiary);border-radius:3px;"></div>
+              </div>
+            </div>
+            <div style="width:16px;background:repeating-linear-gradient(135deg,transparent,transparent 4px,rgba(0,113,227,0.12) 4px,rgba(0,113,227,0.12) 8px);border-radius:3px;border:1px dashed rgba(0,113,227,0.25);flex-shrink:0;" title="empty side space"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- FAB -->
+    <div style="position:absolute;bottom:14px;right:calc(65% + 12px);width:38px;height:38px;border-radius:50%;background:#0071e3;display:flex;align-items:center;justify-content:center;color:#fff;font-size:0.9rem;box-shadow:0 3px 10px rgba(0,0,0,0.3);">✕</div>
+  </div>
+  <p style="font-size:0.8rem;color:var(--text-secondary);margin-top:0.75rem;">Blue hatched areas = empty space on sides of centred content</p>
+</div>
+
+<div class="section">
+  <h3>Final sizing</h3>
+  <ul style="font-size:0.85rem;color:var(--text-secondary);line-height:1.9;list-style:disc;padding-left:1.2rem;margin-top:0.5rem;">
+    <li>Panel: <strong>full-width on mobile</strong>, <strong>65vw on sm+</strong></li>
+    <li>Inner content: <strong>max-w-2xl, mx-auto</strong> (centred with side breathing room)</li>
+    <li>FAB: 52px circle, fixed <code>bottom-6 right-6</code></li>
+    <li>State persists — panel never unmounts</li>
+    <li>Escape key + backdrop (mobile) + ✕ button all close the panel</li>
+  </ul>
+</div>
