@@ -449,7 +449,7 @@ export async function createNotionDataSource(
   await throttleNotion();
   const database = await client.databases.create({
     parent: { type: 'workspace', workspace: true },
-    title: [{ type: 'text', text: { content: 'Notemaker Terms' } }],
+    title: [{ type: 'text', text: { content: 'DailyLearning Terms' } }],
     initial_data_source: {
       properties: {
         Study: { title: {} },
@@ -482,6 +482,6 @@ export async function createNotionDataSource(
 
   return {
     id: dataSourceId,
-    title: ('title' in database ? database.title[0]?.plain_text : undefined) ?? 'Notemaker Terms',
+    title: ('title' in database ? database.title[0]?.plain_text : undefined) ?? 'DailyLearning Terms',
   };
 }

@@ -1,6 +1,6 @@
 {
-  "name": "NoteMaker",
-  "short_name": "NoteMaker",
+  "name": "DailyLearning",
+  "short_name": "DailyLearning",
   "description": "Your personal learning notebook — capture terms, build understanding, and sync with Notion.",
   "start_url": "/?source=pwa",
   "scope": "/",

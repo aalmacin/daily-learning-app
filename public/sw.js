@@ -1,4 +1,4 @@
-/* NoteMaker — Service Worker
+/* DailyLearning — Service Worker
  * Strategy:
  *   - Precache app shell on install
  *   - Network-first for navigations (fall back to cached shell offline)
