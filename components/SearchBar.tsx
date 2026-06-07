@@ -41,6 +41,7 @@ export function SearchBar() {
       </svg>
       <input
         type="text"
+        aria-label="Search terms"
         value={value}
         onChange={(e) => setValue(e.target.value)}
         placeholder="Search terms…"
