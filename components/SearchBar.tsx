@@ -1,20 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 export function SearchBar() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [value, setValue] = useState(searchParams.get('q') ?? '');
+  const q = searchParams.get('q') ?? '';
 
-  useEffect(() => {
-    setValue(searchParams.get('q') ?? '');
-  }, [searchParams]);
-
-  function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const trimmed = value.trim();
+    const formData = new FormData(e.currentTarget);
+    const trimmed = (formData.get('q') as string).trim();
     if (trimmed) {
       router.push(`/terms?q=${encodeURIComponent(trimmed)}`);
     } else {
@@ -40,10 +36,11 @@ export function SearchBar() {
         <line x1="21" y1="21" x2="16.65" y2="16.65" />
       </svg>
       <input
+        key={q}
         type="text"
+        name="q"
         aria-label="Search terms"
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
+        defaultValue={q}
         placeholder="Search terms…"
         className="flex-1 bg-transparent text-sm text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 focus:outline-none min-w-0"
       />
