@@ -1,6 +1,6 @@
 'use server';
 
-import { deleteTerm as dbDeleteTerm, getAllCategories, getAllTerms, getTermById, getUserSettings, updateTerm } from '@/lib/db';
+import { deleteTerm as dbDeleteTerm, getAllCategories, getAllTerms, getTermById, getTermsPaginated, getUserSettings, updateTerm } from '@/lib/db';
 import { explainTermWithAI } from '@/lib/openai';
 import { getCurrentUser } from '@/lib/auth';
 import { archiveNotionPage, unarchiveNotionPage, updateNotionPageContent, updateNotionPageMetadata } from '@/lib/notion';
@@ -57,6 +57,18 @@ export async function fetchAllTerms(): Promise<Term[]> {
   const user = await getCurrentUser();
   if (!user) throw new Error('Not authenticated');
   return getAllTerms(user.id);
+}
+
+const PRIORITY_ORDER: Record<Term['priority'], number> = { High: 0, Medium: 1, Low: 2 };
+
+export async function searchTerms(q: string): Promise<Term[]> {
+  const user = await getCurrentUser();
+  if (!user) throw new Error('Not authenticated');
+  const { terms } = await getTermsPaginated({ userId: user.id, page: 1, pageSize: 20, q });
+  return terms.sort((a, b) => {
+    if (a.explained !== b.explained) return a.explained ? -1 : 1;
+    return PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority];
+  });
 }
 
 export async function regenerateTerm(id: number, name: string, context?: string): Promise<Term> {

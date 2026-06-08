@@ -1,10 +1,11 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
+import { Suspense } from "react";
 import { Providers } from "@/components/Providers";
 import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration";
 import NavMenu from "@/components/NavMenu";
-import { GlobalSearch } from "@/components/GlobalSearch";
+import { SearchBar } from "@/components/SearchBar";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import "./globals.css";
 
@@ -48,17 +49,22 @@ export default async function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <header className="relative z-50 border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
-          <div className="max-w-6xl mx-auto px-4 md:px-6 py-3 md:py-4 flex items-center justify-between gap-2">
+          <div className="max-w-6xl mx-auto px-4 md:px-6 py-3 md:py-4 flex items-center gap-3">
             <Link href="/" className="text-base md:text-lg font-semibold text-zinc-900 dark:text-zinc-50 hover:opacity-80 transition-opacity shrink-0">
               DailyLearning
             </Link>
-            {user && <NavMenu />}
+            {user && (
+              <>
+                <div className="flex-1" />
+                <Suspense fallback={<div className="min-w-[120px] max-w-[280px] w-[30%]" />}>
+                  <SearchBar />
+                </Suspense>
+                <NavMenu />
+              </>
+            )}
           </div>
         </header>
-        <Providers>
-          {children}
-          {user && <GlobalSearch />}
-        </Providers>
+        <Providers>{children}</Providers>
         <ServiceWorkerRegistration />
       </body>
     </html>

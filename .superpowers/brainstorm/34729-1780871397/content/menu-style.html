@@ -1,0 +1,59 @@
+<h2>Hamburger menu style</h2>
+<p class="subtitle">How should the menu appear when the hamburger is clicked?</p>
+
+<div class="cards">
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background:#f4f4f5;border-radius:8px;overflow:hidden;font-family:sans-serif;font-size:12px;position:relative;min-height:160px">
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:#fff;border-bottom:1px solid #e4e4e7">
+          <span style="font-weight:700;color:#18181b">DailyLearning</span>
+          <div style="flex:1"></div>
+          <div style="display:flex;align-items:center;gap:6px;background:#f4f4f5;border:1px solid #d4d4d8;border-radius:6px;padding:5px 10px;width:30%;min-width:80px">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <span style="color:#a1a1aa;font-size:10px">Search...</span>
+          </div>
+          <div style="width:18px;cursor:pointer;position:relative;height:16px;flex-shrink:0;margin-left:4px">
+            <div style="position:absolute;top:50%;left:0;right:0;height:2px;background:#52525b;border-radius:1px;transform:translateY(-50%) rotate(45deg)"></div>
+            <div style="position:absolute;top:50%;left:0;right:0;height:2px;background:#52525b;border-radius:1px;transform:translateY(-50%) rotate(-45deg)"></div>
+          </div>
+        </div>
+        <div style="position:absolute;top:41px;right:16px;background:#fff;border:1px solid #e4e4e7;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.12);width:160px;z-index:10">
+          <div style="padding:8px 14px;border-bottom:1px solid #f4f4f5;color:#3f3f46">Terms</div>
+          <div style="padding:8px 14px;border-bottom:1px solid #f4f4f5;color:#3f3f46">Term List</div>
+          <div style="padding:8px 14px;border-bottom:1px solid #f4f4f5;color:#3f3f46">Flashcards</div>
+          <div style="padding:8px 14px;border-bottom:1px solid #f4f4f5;color:#3f3f46">Categories</div>
+          <div style="padding:8px 14px;border-bottom:1px solid #f4f4f5;color:#3f3f46">Settings</div>
+          <div style="padding:8px 14px;color:#3f3f46">Sign out</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A — Floating dropdown (right-aligned)</h3>
+      <p>Compact dropdown anchored to the hamburger icon. Floats above the page content, doesn't push layout.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background:#f4f4f5;border-radius:8px;overflow:hidden;font-family:sans-serif;font-size:12px;position:relative;min-height:160px;display:flex">
+        <div style="flex:1;padding:16px;color:#a1a1aa;font-size:11px;display:flex;align-items:flex-start;padding-top:50px">Page content</div>
+        <div style="position:absolute;top:0;right:0;bottom:0;width:160px;background:#fff;border-left:1px solid #e4e4e7;box-shadow:-4px 0 16px rgba(0,0,0,0.08);z-index:10;display:flex;flex-direction:column">
+          <div style="padding:10px 14px;border-bottom:1px solid #e4e4e7;display:flex;justify-content:space-between;align-items:center">
+            <span style="font-weight:600;color:#18181b;font-size:11px">Menu</span>
+            <span style="color:#a1a1aa;font-size:14px;cursor:pointer">✕</span>
+          </div>
+          <div style="padding:8px 14px;border-bottom:1px solid #f4f4f5;color:#3f3f46">Terms</div>
+          <div style="padding:8px 14px;border-bottom:1px solid #f4f4f5;color:#3f3f46">Term List</div>
+          <div style="padding:8px 14px;border-bottom:1px solid #f4f4f5;color:#3f3f46">Flashcards</div>
+          <div style="padding:8px 14px;border-bottom:1px solid #f4f4f5;color:#3f3f46">Categories</div>
+          <div style="padding:8px 14px;border-bottom:1px solid #f4f4f5;color:#3f3f46">Settings</div>
+          <div style="padding:8px 14px;color:#3f3f46">Sign out</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — Slide-in panel (right side)</h3>
+      <p>A narrow panel slides in from the right, overlaying the page content. More modern, dismissible by clicking outside.</p>
+    </div>
+  </div>
+</div>
