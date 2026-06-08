@@ -106,16 +106,17 @@ function ResearchChat({ term }: { term: Term }) {
 }
 
 function TermCard({ term }: { term: Term }) {
+  const [expanded, setExpanded] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
 
   return (
-    <div className={`flex flex-col border rounded-lg overflow-hidden bg-white dark:bg-zinc-900 transition-colors ${
-      chatOpen
-        ? 'col-span-2 border-cyan-500 dark:border-cyan-600'
-        : 'border-zinc-200 dark:border-zinc-800'
-    }`}>
-      {/* Header */}
-      <div className="px-4 py-3 border-b border-zinc-100 dark:border-zinc-800 flex items-center gap-2 flex-wrap">
+    <div className={`flex flex-col border rounded-lg overflow-hidden bg-white dark:bg-zinc-900 transition-colors ${chatOpen ? 'border-cyan-500 dark:border-cyan-600' : 'border-zinc-200 dark:border-zinc-800'}`}>
+      {/* Header — always visible, click to expand */}
+      <button
+        type="button"
+        onClick={() => setExpanded((o) => !o)}
+        className="px-4 py-3 flex items-center gap-2 flex-wrap text-left hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors"
+      >
         <span className="font-semibold text-sm text-zinc-900 dark:text-zinc-50 flex-1">{term.name}</span>
         {term.explained && (
           <span className="text-xs text-green-700 bg-green-50 border border-green-200 dark:text-green-300 dark:bg-green-950 dark:border-green-800 px-2 py-0.5 rounded-full whitespace-nowrap">
@@ -123,58 +124,73 @@ function TermCard({ term }: { term: Term }) {
           </span>
         )}
         <PriorityBadge priority={term.priority} />
-      </div>
+        <svg
+          width="12"
+          height="12"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          className={`shrink-0 text-zinc-400 dark:text-zinc-500 transition-transform ${expanded ? 'rotate-180' : ''}`}
+        >
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </button>
 
-      {/* Body */}
-      <div className={`flex flex-col gap-3 flex-1 ${chatOpen ? 'px-[30%] py-4' : 'px-4 py-3'}`}>
-        <p className="text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">{term.content}</p>
+      {expanded && (
+        <>
+          {/* Body */}
+          <div className="flex flex-col gap-3 px-4 py-3 border-t border-zinc-100 dark:border-zinc-800">
+            <p className="text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">{term.content}</p>
 
-        {chatOpen && (
-          <ResearchChat term={term} />
-        )}
+            {chatOpen && (
+              <ResearchChat term={term} />
+            )}
 
-        {term.categories.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {term.categories.map((cat) => (
-              <span
-                key={cat}
-                className="text-xs text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 px-2 py-0.5 rounded-full"
-              >
-                {cat}
-              </span>
-            ))}
+            {term.categories.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {term.categories.map((cat) => (
+                  <span
+                    key={cat}
+                    className="text-xs text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 px-2 py-0.5 rounded-full"
+                  >
+                    {cat}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
-        )}
-      </div>
 
-      {/* Footer actions */}
-      <div className="px-4 py-2 border-t border-zinc-100 dark:border-zinc-800 flex gap-2">
-        <button
-          type="button"
-          onClick={() => setChatOpen((o) => !o)}
-          className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md border text-xs font-medium transition-colors ${
-            chatOpen
-              ? 'border-cyan-500 bg-cyan-50 text-cyan-700 dark:border-cyan-600 dark:bg-cyan-950 dark:text-cyan-300'
-              : 'border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800'
-          }`}
-        >
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-          </svg>
-          Ask
-        </button>
-        <Link
-          href={`/terms/${term.id}`}
-          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-xs font-medium transition-colors"
-        >
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-            <polyline points="15 3 21 3 21 9" />
-            <line x1="10" y1="14" x2="21" y2="3" />
-          </svg>
-          View
-        </Link>
-      </div>
+          {/* Footer actions */}
+          <div className="px-4 py-2 border-t border-zinc-100 dark:border-zinc-800 flex gap-2">
+            <button
+              type="button"
+              onClick={() => setChatOpen((o) => !o)}
+              className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md border text-xs font-medium transition-colors ${
+                chatOpen
+                  ? 'border-cyan-500 bg-cyan-50 text-cyan-700 dark:border-cyan-600 dark:bg-cyan-950 dark:text-cyan-300'
+                  : 'border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800'
+              }`}
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
+              Ask
+            </button>
+            <Link
+              href={`/terms/${term.id}`}
+              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-xs font-medium transition-colors"
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                <polyline points="15 3 21 3 21 9" />
+                <line x1="10" y1="14" x2="21" y2="3" />
+              </svg>
+              View
+            </Link>
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -193,7 +209,7 @@ export function TermSearchResults({ terms, q }: Props) {
       <p className="text-sm text-zinc-500 dark:text-zinc-400">
         {terms.length} result{terms.length !== 1 ? 's' : ''} for &ldquo;{q}&rdquo;
       </p>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3">
         {terms.map((term) => (
           <TermCard key={term.id} term={term} />
         ))}
