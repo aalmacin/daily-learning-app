@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Expandable Term List Mockup</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #09090b;
+    color: #fafafa;
+    padding: 32px 24px;
+    min-height: 100vh;
+  }
+  h1 { font-size: 22px; font-weight: 600; margin-bottom: 6px; color: #fafafa; }
+  .subtitle { font-size: 13px; color: #71717a; margin-bottom: 24px; }
+
+  .list-container {
+    border: 1px solid #27272a;
+    border-radius: 12px;
+    overflow: hidden;
+    max-width: 860px;
+  }
+
+  /* --- ROW --- */
+  .row-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: #09090b;
+    border-bottom: 1px solid #27272a;
+    transition: background 0.15s;
+  }
+  .row-header:last-child { border-bottom: none; }
+
+  .drag-handle {
+    color: #3f3f46;
+    flex-shrink: 0;
+    cursor: grab;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+  }
+
+  .date-col {
+    font-size: 12px;
+    color: #71717a;
+    flex-shrink: 0;
+    width: 112px;
+  }
+
+  .expand-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #71717a;
+    padding: 2px;
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    transition: color 0.15s;
+  }
+  .expand-btn:hover { color: #d4d4d8; }
+  .expand-btn.open { color: #a1a1aa; transform: rotate(0deg); }
+  .expand-btn svg { transition: transform 0.2s; }
+  .expand-btn.open svg { transform: rotate(90deg); }
+
+  .term-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: #fafafa;
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .categories { display: flex; gap: 4px; flex-wrap: wrap; }
+  .cat-badge {
+    padding: 2px 8px;
+    font-size: 11px;
+    border-radius: 999px;
+    background: #27272a;
+    color: #a1a1aa;
+    white-space: nowrap;
+  }
+
+  .btn-open {
+    flex-shrink: 0;
+    padding: 4px 10px;
+    font-size: 11px;
+    border-radius: 6px;
+    background: #27272a;
+    color: #a1a1aa;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: background 0.15s;
+  }
+  .btn-open:hover { background: #3f3f46; }
+
+  .btn-remove {
+    flex-shrink: 0;
+    padding: 4px 10px;
+    font-size: 11px;
+    border-radius: 6px;
+    background: #450a0a22;
+    color: #f87171;
+    border: none;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .btn-remove:hover { background: #450a0a44; }
+
+  /* --- EXPANDED CONTENT --- */
+  .expanded-content {
+    background: #09090b;
+    border-bottom: 1px solid #27272a;
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height 0.3s ease;
+  }
+  .expanded-content.visible {
+    max-height: 2000px;
+  }
+
+  .term-detail-wrap {
+    padding: 24px;
+    background: #030303;
+    border-top: 1px solid #18181b;
+  }
+
+  /* Term card */
+  .term-card {
+    border: 1px solid #27272a;
+    border-radius: 10px;
+    background: #09090b;
+    padding: 16px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .priority-badge {
+    margin-left: auto;
+    font-size: 11px;
+    font-weight: 500;
+    color: #facc15;
+  }
+
+  /* Feynman section */
+  .feynman-card {
+    border: 1px solid #27272a;
+    border-radius: 10px;
+    background: #09090b;
+    padding: 20px;
+  }
+  .feynman-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  .feynman-title { font-size: 14px; font-weight: 600; color: #fafafa; }
+
+  .step-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .step-num {
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: #3f3f46;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700; color: #e4e4e7;
+    flex-shrink: 0;
+  }
+  .step-name {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #71717a;
+  }
+
+  .step-block {
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #18181b;
+  }
+  .step-block:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+
+  .inner-box {
+    background: #18181b;
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-size: 13px;
+    color: #a1a1aa;
+    line-height: 1.6;
+    margin-top: 8px;
+  }
+
+  .accuracy-green { color: #4ade80; font-size: 13px; font-weight: 600; }
+  .accuracy-label { font-size: 11px; color: #71717a; margin-top: 4px; }
+
+  .textarea-mock {
+    width: 100%;
+    background: #18181b;
+    border: 1px solid #3f3f46;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    color: #52525b;
+    margin-top: 8px;
+    height: 80px;
+  }
+
+  .chat-bubble-assistant {
+    background: #27272a;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 12px;
+    color: #a1a1aa;
+    max-width: 80%;
+    align-self: flex-start;
+    line-height: 1.5;
+  }
+  .chat-bubble-user {
+    background: #fafafa;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 12px;
+    color: #09090b;
+    max-width: 80%;
+    align-self: flex-end;
+    line-height: 1.5;
+  }
+  .chat-messages { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+
+  .btn-primary {
+    padding: 7px 16px;
+    font-size: 12px;
+    font-weight: 500;
+    border-radius: 8px;
+    background: #fafafa;
+    color: #09090b;
+    border: none;
+    cursor: default;
+    margin-top: 10px;
+  }
+  .btn-secondary {
+    padding: 7px 16px;
+    font-size: 12px;
+    font-weight: 500;
+    border-radius: 8px;
+    background: transparent;
+    color: #a1a1aa;
+    border: 1px solid #3f3f46;
+    cursor: default;
+    margin-top: 10px;
+    margin-left: 8px;
+  }
+
+  .loading-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 20px 24px;
+    color: #52525b;
+    font-size: 13px;
+  }
+  .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid #3f3f46;
+    border-top-color: #a1a1aa;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .note-box { font-size: 11px; color: #52525b; margin-top: 12px; font-style: italic; }
+  .annotation {
+    font-size: 11px;
+    color: #a78bfa;
+    background: #1e1b4b44;
+    border: 1px solid #4c1d9544;
+    border-radius: 6px;
+    padding: 4px 10px;
+    display: inline-block;
+    margin-bottom: 10px;
+  }
+</style>
+</head>
+<body>
+<h1>Term List — Expandable Rows</h1>
+<p class="subtitle">Each row has a chevron toggle. Expanding shows the full Feynman steps inline.</p>
+
+<div class="list-container">
+
+  <!-- ROW 1: Collapsed -->
+  <div class="row-header">
+    <div class="drag-handle">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+        <circle cx="5" cy="5" r="1.5"/><circle cx="11" cy="5" r="1.5"/>
+        <circle cx="5" cy="11" r="1.5"/><circle cx="11" cy="11" r="1.5"/>
+      </svg>
+    </div>
+    <span class="date-col">Sun, Jun 8, 2026</span>
+    <button class="expand-btn" title="Expand">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="6 4 10 8 6 12"/>
+      </svg>
+    </button>
+    <span class="term-name">Gradient Descent</span>
+    <div class="categories">
+      <span class="cat-badge">ML</span>
+      <span class="cat-badge">Math</span>
+    </div>
+    <a class="btn-open" href="#">↗ Open</a>
+    <button class="btn-remove">Remove</button>
+  </div>
+
+  <!-- ROW 2: Expanded — showing loading state first -->
+  <div>
+    <div class="row-header" style="background:#111113;">
+      <div class="drag-handle">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+          <circle cx="5" cy="5" r="1.5"/><circle cx="11" cy="5" r="1.5"/>
+          <circle cx="5" cy="11" r="1.5"/><circle cx="11" cy="11" r="1.5"/>
+        </svg>
+      </div>
+      <span class="date-col">Mon, Jun 9, 2026</span>
+      <button class="expand-btn open" title="Collapse">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="6 4 10 8 6 12"/>
+        </svg>
+      </button>
+      <span class="term-name">Transformer Architecture</span>
+      <div class="categories">
+        <span class="cat-badge">ML</span>
+        <span class="cat-badge">NLP</span>
+      </div>
+      <a class="btn-open" href="#">↗ Open</a>
+      <button class="btn-remove">Remove</button>
+    </div>
+    <!-- Expanded: Loading state -->
+    <div style="border-top:1px solid #18181b; background:#030303;">
+      <div class="annotation" style="margin: 12px 24px 0;">On first expand — loading state</div>
+      <div class="loading-row">
+        <div class="spinner"></div>
+        Loading…
+      </div>
+    </div>
+  </div>
+
+  <!-- ROW 3: Expanded — fully loaded -->
+  <div>
+    <div class="row-header" style="background:#111113;">
+      <div class="drag-handle">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+          <circle cx="5" cy="5" r="1.5"/><circle cx="11" cy="5" r="1.5"/>
+          <circle cx="5" cy="11" r="1.5"/><circle cx="11" cy="11" r="1.5"/>
+        </svg>
+      </div>
+      <span class="date-col">Tue, Jun 10, 2026</span>
+      <button class="expand-btn open" title="Collapse">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="6 4 10 8 6 12"/>
+        </svg>
+      </button>
+      <span class="term-name">Attention Mechanism</span>
+      <div class="categories">
+        <span class="cat-badge">ML</span>
+      </div>
+      <a class="btn-open" href="#">↗ Open</a>
+      <button class="btn-remove">Remove</button>
+    </div>
+    <!-- Expanded: Full content -->
+    <div style="border-top:1px solid #18181b;">
+      <div class="annotation" style="margin: 12px 24px 0;">After data loads — full Feynman steps</div>
+      <div class="term-detail-wrap">
+
+        <!-- Term card -->
+        <div class="term-card">
+          <span class="cat-badge">ML</span>
+          <span class="priority-badge">Medium</span>
+        </div>
+
+        <!-- Feynman card -->
+        <div class="feynman-card">
+          <div class="feynman-header">
+            <span class="feynman-title">Feynman Method</span>
+            <select style="font-size:11px;border:1px solid #3f3f46;border-radius:4px;padding:3px 6px;background:#18181b;color:#a1a1aa;">
+              <option>Attempt 2 (latest)</option>
+              <option>Attempt 1</option>
+            </select>
+          </div>
+
+          <!-- Step 1: Cold Explanation -->
+          <div class="step-block">
+            <div class="step-label">
+              <span class="step-num">1</span>
+              <span class="step-name">Cold Explanation</span>
+            </div>
+            <div class="inner-box">
+              Attention allows the model to weigh how relevant each token is to every other token in the sequence…
+              <div style="margin-top:10px;padding-top:10px;border-top:1px solid #27272a;">
+                <p class="accuracy-green">Accuracy: 82%</p>
+                <p class="accuracy-label">Good grasp of the core idea. Could clarify the role of Q/K/V matrices more precisely.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 2: Research -->
+          <div class="step-block">
+            <div class="step-label">
+              <span class="step-num">2</span>
+              <span class="step-name">Research</span>
+            </div>
+            <div class="inner-box">
+              <p style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#52525b;margin-bottom:4px;">Definition</p>
+              A mechanism that computes weighted sums over values, where weights are derived from query-key dot products, enabling dynamic context-sensitive representations.
+            </div>
+            <div class="chat-messages">
+              <div class="chat-bubble-user">Why do we use scaled dot product?</div>
+              <div class="chat-bubble-assistant">Scaling by √d_k prevents the dot products from growing large in magnitude, which would push softmax into regions with tiny gradients.</div>
+            </div>
+          </div>
+
+          <!-- Step 3: Refined Explanation -->
+          <div class="step-block">
+            <div class="step-label">
+              <span class="step-num">3</span>
+              <span class="step-name">Refined Explanation</span>
+            </div>
+            <div class="inner-box">
+              Attention computes Query, Key, Value projections. Each token attends to all others by scoring Q·Kᵀ / √d_k, applying softmax to get weights, then summing over V…
+              <div style="margin-top:10px;padding-top:10px;border-top:1px solid #27272a;">
+                <p class="accuracy-green">Accuracy: 94%</p>
+                <p class="accuracy-label">Excellent refinement. Covers the mechanics clearly.</p>
+              </div>
+            </div>
+            <div style="margin-top:12px;">
+              <p style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#71717a;margin-bottom:6px;">Formatted Note</p>
+              <div class="inner-box" style="font-size:12px;">Attention(Q,K,V) = softmax(QKᵀ/√d_k) · V — scores how relevant each token is to every other, scales to avoid vanishing gradients, applies softmax to normalize, then aggregates values.</div>
+            </div>
+            <div>
+              <button class="btn-primary">Add to Notion</button>
+              <button class="btn-secondary">Start New Attempt</button>
+            </div>
+          </div>
+
+        </div><!-- /feynman-card -->
+      </div><!-- /term-detail-wrap -->
+    </div>
+  </div>
+
+  <!-- ROW 4: Collapsed -->
+  <div class="row-header" style="border-bottom:none;">
+    <div class="drag-handle">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+        <circle cx="5" cy="5" r="1.5"/><circle cx="11" cy="5" r="1.5"/>
+        <circle cx="5" cy="11" r="1.5"/><circle cx="11" cy="11" r="1.5"/>
+      </svg>
+    </div>
+    <span class="date-col">Wed, Jun 11, 2026</span>
+    <button class="expand-btn" title="Expand">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="6 4 10 8 6 12"/>
+      </svg>
+    </button>
+    <span class="term-name">Backpropagation</span>
+    <div class="categories">
+      <span class="cat-badge">ML</span>
+      <span class="cat-badge">Math</span>
+    </div>
+    <a class="btn-open" href="#">↗ Open</a>
+    <button class="btn-remove">Remove</button>
+  </div>
+
+</div><!-- /list-container -->
+
+<p class="note-box" style="margin-top:16px;">Chevron rotates 90° when expanded. Row background subtly highlights when open. Loading spinner appears only on first expand.</p>
+</body>
+</html>
