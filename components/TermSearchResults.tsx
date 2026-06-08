@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import Link from 'next/link';
-import type { Term, ChatMessage, ConceptRefinement } from '@/lib/db';
+import type { Term, ChatMessage } from '@/lib/db';
 import { createAttempt } from '@/actions/refinements';
 import { askQuestion } from '@/actions/chat';
 
@@ -45,7 +45,7 @@ function ResearchChat({ term }: { term: Term }) {
     startTransition(async () => {
       try {
         if (!chat) {
-          const refinement: ConceptRefinement = await createAttempt(term.id);
+          const refinement = await createAttempt(term.id);
           const messages = await askQuestion(refinement.id, question);
           setChat({ refinementId: refinement.id, messages });
         } else {
