@@ -1,0 +1,117 @@
+<h2>Card Layout — Spacing Options</h2>
+<p class="subtitle">Reducing empty space between sections</p>
+
+<div class="cards">
+
+  <!-- Option A: Compact, all in one body -->
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="border:1px solid #e4e4e7;border-radius:8px;overflow:hidden;background:#fff;font-family:sans-serif;font-size:12px">
+        <!-- Header -->
+        <div style="padding:9px 12px;border-bottom:1px solid #f4f4f5;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          <span style="font-weight:600;color:#18181b;flex:1;font-size:13px">Machine Learning</span>
+          <span style="font-size:9px;color:#16a34a;background:#f0fdf4;border:1px solid #bbf7d0;padding:1px 6px;border-radius:999px;white-space:nowrap">✓ Explained</span>
+          <span style="font-size:9px;color:#0e7490;background:#ecfeff;padding:1px 6px;border-radius:999px;white-space:nowrap">High</span>
+          <div style="width:1px;height:16px;background:#e4e4e7"></div>
+          <button style="display:flex;align-items:center;gap:3px;padding:3px 7px;border-radius:5px;border:1px solid #e4e4e7;background:#fff;color:#52525b;font-size:10px;cursor:pointer">
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Ask
+          </button>
+          <button style="display:flex;align-items:center;gap:3px;padding:3px 7px;border-radius:5px;border:1px solid #e4e4e7;background:#fff;color:#52525b;font-size:10px;cursor:pointer">
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg> View
+          </button>
+        </div>
+        <!-- Body: description + categories together, no bg separation -->
+        <div style="padding:10px 12px;display:flex;flex-direction:column;gap:8px">
+          <p style="margin:0;color:#52525b;font-size:11px;line-height:1.6">A subfield of artificial intelligence that enables systems to learn and improve from experience without being explicitly programmed.</p>
+          <div style="display:flex;gap:5px;flex-wrap:wrap">
+            <span style="font-size:9px;color:#52525b;background:#f4f4f5;border:1px solid #e4e4e7;padding:1px 7px;border-radius:999px">AI</span>
+            <span style="font-size:9px;color:#52525b;background:#f4f4f5;border:1px solid #e4e4e7;padding:1px 7px;border-radius:999px">Data Science</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A — Unified body</h3>
+      <p>Description and categories share one padded area, no background separation. Feels tighter and more connected.</p>
+    </div>
+  </div>
+
+  <!-- Option B: Keep separation but tighter -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="border:1px solid #e4e4e7;border-radius:8px;overflow:hidden;background:#fff;font-family:sans-serif;font-size:12px">
+        <!-- Header -->
+        <div style="padding:9px 12px;border-bottom:1px solid #f4f4f5;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          <span style="font-weight:600;color:#18181b;flex:1;font-size:13px">Machine Learning</span>
+          <span style="font-size:9px;color:#16a34a;background:#f0fdf4;border:1px solid #bbf7d0;padding:1px 6px;border-radius:999px;white-space:nowrap">✓ Explained</span>
+          <span style="font-size:9px;color:#0e7490;background:#ecfeff;padding:1px 6px;border-radius:999px;white-space:nowrap">High</span>
+          <div style="width:1px;height:16px;background:#e4e4e7"></div>
+          <button style="display:flex;align-items:center;gap:3px;padding:3px 7px;border-radius:5px;border:1px solid #e4e4e7;background:#fff;color:#52525b;font-size:10px;cursor:pointer">
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Ask
+          </button>
+          <button style="display:flex;align-items:center;gap:3px;padding:3px 7px;border-radius:5px;border:1px solid #e4e4e7;background:#fff;color:#52525b;font-size:10px;cursor:pointer">
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg> View
+          </button>
+        </div>
+        <!-- Description with subtle bg -->
+        <div style="padding:9px 12px;border-bottom:1px solid #f4f4f5;background:#fafafa">
+          <p style="margin:0;color:#52525b;font-size:11px;line-height:1.6">A subfield of artificial intelligence that enables systems to learn and improve from experience without being explicitly programmed.</p>
+        </div>
+        <!-- Categories tight -->
+        <div style="padding:6px 12px;display:flex;gap:5px;flex-wrap:wrap">
+          <span style="font-size:9px;color:#52525b;background:#f4f4f5;border:1px solid #e4e4e7;padding:1px 7px;border-radius:999px">AI</span>
+          <span style="font-size:9px;color:#52525b;background:#f4f4f5;border:1px solid #e4e4e7;padding:1px 7px;border-radius:999px">Data Science</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — Tighter sections</h3>
+      <p>Keeps the description background but reduces padding. Categories row is more compact at the bottom.</p>
+    </div>
+  </div>
+
+</div>
+
+<div class="section" style="margin-top:24px">
+  <p class="label">Option A with chat open</p>
+  <div class="mockup">
+    <div class="mockup-body">
+      <div style="border:1px solid #0e7490;border-radius:8px;overflow:hidden;background:#fff;font-family:sans-serif;font-size:12px">
+        <div style="padding:9px 12px;border-bottom:1px solid #f4f4f5;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          <span style="font-weight:600;color:#18181b;flex:1;font-size:13px">Machine Learning</span>
+          <span style="font-size:9px;color:#16a34a;background:#f0fdf4;border:1px solid #bbf7d0;padding:1px 6px;border-radius:999px">✓ Explained</span>
+          <span style="font-size:9px;color:#0e7490;background:#ecfeff;padding:1px 6px;border-radius:999px">High</span>
+          <div style="width:1px;height:16px;background:#e4e4e7"></div>
+          <button style="display:flex;align-items:center;gap:3px;padding:3px 7px;border-radius:5px;border:1px solid #0e7490;background:#ecfeff;color:#0e7490;font-size:10px;cursor:pointer;font-weight:600">
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Ask
+          </button>
+          <button style="display:flex;align-items:center;gap:3px;padding:3px 7px;border-radius:5px;border:1px solid #e4e4e7;background:#fff;color:#52525b;font-size:10px;cursor:pointer">
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg> View
+          </button>
+        </div>
+        <div style="padding:10px 12px;display:flex;flex-direction:column;gap:8px">
+          <p style="margin:0;color:#52525b;font-size:11px;line-height:1.6">A subfield of artificial intelligence that enables systems to learn and improve from experience without being explicitly programmed.</p>
+          <!-- Inline chat -->
+          <div style="border:1px solid #e4e4e7;border-radius:7px;overflow:hidden">
+            <div style="padding:6px 10px;border-bottom:1px solid #f4f4f5;background:#fafafa">
+              <span style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#a1a1aa">Research</span>
+            </div>
+            <div style="padding:8px 10px;display:flex;flex-direction:column;gap:5px">
+              <div style="background:#f4f4f5;border-radius:5px;padding:5px 8px;font-size:11px;color:#3f3f46;align-self:flex-end;max-width:80%">What is overfitting?</div>
+              <div style="background:#ecfeff;border-radius:5px;padding:5px 8px;font-size:11px;color:#164e63;align-self:flex-start;max-width:80%;line-height:1.5">Overfitting is when a model memorizes the training data too closely, losing its ability to generalize to new data.</div>
+            </div>
+            <div style="padding:6px 10px;border-top:1px solid #f4f4f5;display:flex;gap:5px">
+              <input style="flex:1;padding:5px 8px;font-size:11px;border:1px solid #d4d4d8;border-radius:5px;background:#f9f9f9;color:#18181b;outline:none" placeholder="Ask about Machine Learning…" />
+              <button style="padding:5px 10px;border-radius:5px;background:#18181b;color:#fff;font-size:10px;font-weight:500;border:none;cursor:pointer">Ask</button>
+            </div>
+          </div>
+          <!-- Categories -->
+          <div style="display:flex;gap:5px;flex-wrap:wrap">
+            <span style="font-size:9px;color:#52525b;background:#f4f4f5;border:1px solid #e4e4e7;padding:1px 7px;border-radius:999px">AI</span>
+            <span style="font-size:9px;color:#52525b;background:#f4f4f5;border:1px solid #e4e4e7;padding:1px 7px;border-radius:999px">Data Science</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,77 @@
+<h2>How should the navbar search work?</h2>
+<p class="subtitle">When you type and press Enter (or click Search), what happens?</p>
+
+<div class="cards">
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background:#f4f4f5;border-radius:8px;padding:12px;font-family:sans-serif;font-size:13px">
+        <div style="display:flex;align-items:center;gap:8px;background:white;border:1px solid #d4d4d8;border-radius:6px;padding:6px 10px;margin-bottom:12px">
+          <span style="color:#a1a1aa">🔍</span>
+          <span style="color:#71717a">machine learning</span>
+          <span style="margin-left:auto;background:#18181b;color:white;padding:2px 8px;border-radius:4px;font-size:11px">Search</span>
+        </div>
+        <div style="background:white;border:1px solid #e4e4e7;border-radius:8px;padding:16px">
+          <div style="color:#52525b;font-size:12px;margin-bottom:8px">Results for "machine learning" (12 terms)</div>
+          <div style="display:grid;gap:8px">
+            <div style="border-bottom:1px solid #f4f4f5;padding-bottom:8px">
+              <div style="font-weight:600;color:#18181b">Machine Learning</div>
+              <div style="color:#71717a;font-size:11px">A type of AI that learns from data...</div>
+            </div>
+            <div style="border-bottom:1px solid #f4f4f5;padding-bottom:8px">
+              <div style="font-weight:600;color:#18181b">Supervised Learning</div>
+              <div style="color:#71717a;font-size:11px">Training with labeled examples...</div>
+            </div>
+            <div>
+              <div style="font-weight:600;color:#18181b">Reinforcement Learning</div>
+              <div style="color:#71717a;font-size:11px">Learning through rewards and penalties...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A — Navigate to Terms page</h3>
+      <p>Submit navigates to <code>/terms?q=query</code>, showing filtered results on the existing Terms page with all its filters/sorting intact.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background:#f4f4f5;border-radius:8px;padding:12px;font-family:sans-serif;font-size:13px">
+        <div style="position:relative">
+          <div style="display:flex;align-items:center;gap:8px;background:white;border:1px solid #0e7490;border-radius:6px;padding:6px 10px;margin-bottom:4px">
+            <span style="color:#a1a1aa">🔍</span>
+            <span style="color:#18181b">machine lea|</span>
+          </div>
+          <div style="background:white;border:1px solid #d4d4d8;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,0.1);padding:8px 0">
+            <div style="padding:8px 12px;border-bottom:1px solid #f4f4f5;display:flex;align-items:center;gap:8px">
+              <span style="font-size:16px">📖</span>
+              <div>
+                <div style="font-weight:600;color:#18181b">Machine Learning</div>
+                <div style="color:#71717a;font-size:11px">Category: AI · Priority: High</div>
+              </div>
+            </div>
+            <div style="padding:8px 12px;border-bottom:1px solid #f4f4f5;display:flex;align-items:center;gap:8px">
+              <span style="font-size:16px">📖</span>
+              <div>
+                <div style="font-weight:600;color:#18181b">Machine Learning Pipeline</div>
+                <div style="color:#71717a;font-size:11px">Category: MLOps · Priority: Medium</div>
+              </div>
+            </div>
+            <div style="padding:8px 12px;display:flex;align-items:center;gap:8px">
+              <span style="font-size:16px">📖</span>
+              <div>
+                <div style="font-weight:600;color:#18181b">Supervised Machine Learning</div>
+                <div style="color:#71717a;font-size:11px">Category: AI · Priority: Low</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — Live dropdown</h3>
+      <p>As you type, a dropdown shows matching terms instantly. Clicking a result navigates directly to that term's detail page.</p>
+    </div>
+  </div>
+</div>

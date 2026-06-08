@@ -1,0 +1,74 @@
+<h2>Search Results — Full Card Design</h2>
+<p class="subtitle">Name · description · explained status · categories · clicks through to /terms/[id]</p>
+
+<div class="section">
+  <p class="label">Terms page with search query</p>
+  <div class="mockup">
+    <div class="mockup-body">
+      <div style="background:#fff;border-radius:6px;font-family:sans-serif;font-size:13px;border:1px solid #e4e4e7">
+        <div style="display:flex;align-items:center;gap:10px;padding:12px 20px;border-bottom:1px solid #e4e4e7">
+          <span style="font-weight:700;color:#18181b;font-size:15px">DailyLearning</span>
+          <div style="flex:1"></div>
+          <div style="display:flex;align-items:center;gap:7px;background:#f4f4f5;border:1px solid #d4d4d8;border-radius:6px;padding:6px 12px;min-width:120px;max-width:280px;width:30%">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <span style="color:#18181b;font-size:12px">machine learning</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:5px;width:20px;cursor:pointer;flex-shrink:0;margin-left:6px">
+            <div style="height:2px;background:#52525b;border-radius:1px"></div>
+            <div style="height:2px;background:#52525b;border-radius:1px"></div>
+            <div style="height:2px;background:#52525b;border-radius:1px"></div>
+          </div>
+        </div>
+
+        <div style="padding:14px 20px;background:#fafafa">
+          <div style="font-size:11px;color:#71717a;margin-bottom:10px">3 results for "machine learning"</div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+
+            <!-- Explained term -->
+            <a href="#" style="text-decoration:none;display:block;border:1px solid #e4e4e7;border-radius:8px;overflow:hidden;background:#fff;cursor:pointer;transition:box-shadow .15s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'" onmouseout="this.style.boxShadow='none'">
+              <div style="padding:10px 14px;border-bottom:1px solid #f4f4f5;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <span style="font-weight:600;color:#18181b;flex:1">Machine Learning</span>
+                <span style="font-size:10px;color:#16a34a;background:#f0fdf4;border:1px solid #bbf7d0;padding:2px 8px;border-radius:999px;white-space:nowrap">✓ Explained</span>
+                <span style="font-size:10px;color:#0e7490;background:#ecfeff;padding:2px 7px;border-radius:999px;white-space:nowrap">High</span>
+              </div>
+              <div style="padding:10px 14px;border-bottom:1px solid #f4f4f5;background:#fafafa">
+                <p style="margin:0;color:#52525b;font-size:12px;line-height:1.65">A subfield of artificial intelligence that enables systems to learn and improve from experience without being explicitly programmed. It focuses on developing algorithms that can access data and use it to learn for themselves.</p>
+              </div>
+              <div style="padding:8px 14px;display:flex;gap:6px;flex-wrap:wrap">
+                <span style="font-size:10px;color:#52525b;background:#f4f4f5;border:1px solid #e4e4e7;padding:2px 8px;border-radius:999px">AI</span>
+                <span style="font-size:10px;color:#52525b;background:#f4f4f5;border:1px solid #e4e4e7;padding:2px 8px;border-radius:999px">Data Science</span>
+              </div>
+            </a>
+
+            <!-- Not explained term -->
+            <a href="#" style="text-decoration:none;display:block;border:1px solid #e4e4e7;border-radius:8px;overflow:hidden;background:#fff;cursor:pointer" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'" onmouseout="this.style.boxShadow='none'">
+              <div style="padding:10px 14px;border-bottom:1px solid #f4f4f5;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <span style="font-weight:600;color:#18181b;flex:1">Machine Learning Pipeline</span>
+                <span style="font-size:10px;color:#ca8a04;background:#fefce8;padding:2px 7px;border-radius:999px;white-space:nowrap">Medium</span>
+              </div>
+              <div style="padding:10px 14px;border-bottom:1px solid #f4f4f5;background:#fafafa">
+                <p style="margin:0;color:#52525b;font-size:12px;line-height:1.65">A series of data processing steps that automate the workflow of a machine learning model, from raw data ingestion through feature engineering, training, evaluation, and deployment.</p>
+              </div>
+              <div style="padding:8px 14px;display:flex;gap:6px;flex-wrap:wrap">
+                <span style="font-size:10px;color:#52525b;background:#f4f4f5;border:1px solid #e4e4e7;padding:2px 8px;border-radius:999px">MLOps</span>
+              </div>
+            </a>
+
+            <!-- Explained, no categories -->
+            <a href="#" style="text-decoration:none;display:block;border:1px solid #e4e4e7;border-radius:8px;overflow:hidden;background:#fff;cursor:pointer" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'" onmouseout="this.style.boxShadow='none'">
+              <div style="padding:10px 14px;border-bottom:1px solid #f4f4f5;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <span style="font-weight:600;color:#18181b;flex:1">Supervised Machine Learning</span>
+                <span style="font-size:10px;color:#16a34a;background:#f0fdf4;border:1px solid #bbf7d0;padding:2px 8px;border-radius:999px;white-space:nowrap">✓ Explained</span>
+                <span style="font-size:10px;color:#52525b;background:#f4f4f5;padding:2px 7px;border-radius:999px;white-space:nowrap">Low</span>
+              </div>
+              <div style="padding:10px 14px;background:#fafafa">
+                <p style="margin:0;color:#52525b;font-size:12px;line-height:1.65">A type of machine learning where the model is trained on labeled data — each training example is paired with the correct output — so the algorithm learns to map inputs to outputs.</p>
+              </div>
+            </a>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

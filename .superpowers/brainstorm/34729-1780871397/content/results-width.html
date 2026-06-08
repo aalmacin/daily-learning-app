@@ -1,0 +1,119 @@
+<h2>Search Results — Container Width on Wide Screens</h2>
+<p class="subtitle">How wide should results be constrained on large screens?</p>
+
+<div class="cards">
+
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background:#fafafa;border-radius:8px;padding:12px;font-family:sans-serif;font-size:11px">
+        <div style="background:#fff;border:1px solid #e4e4e7;border-radius:6px;overflow:hidden;margin:0 auto;max-width:580px">
+          <div style="padding:8px 12px;border-bottom:1px solid #f4f4f5;display:flex;align-items:center;gap:6px">
+            <span style="font-weight:600;color:#18181b;flex:1">Machine Learning</span>
+            <span style="font-size:9px;color:#16a34a;background:#f0fdf4;border:1px solid #bbf7d0;padding:1px 6px;border-radius:999px">✓ Explained</span>
+            <span style="font-size:9px;color:#0e7490;background:#ecfeff;padding:1px 6px;border-radius:999px">High</span>
+            <div style="width:1px;height:14px;background:#e4e4e7"></div>
+            <span style="font-size:9px;color:#52525b;border:1px solid #e4e4e7;padding:1px 6px;border-radius:5px">Ask</span>
+            <span style="font-size:9px;color:#52525b;border:1px solid #e4e4e7;padding:1px 6px;border-radius:5px">View</span>
+          </div>
+          <div style="padding:8px 12px">
+            <p style="margin:0 0 6px;color:#52525b;font-size:10px;line-height:1.6">A subfield of artificial intelligence that enables systems to learn and improve from experience without being explicitly programmed.</p>
+            <div style="display:flex;gap:4px">
+              <span style="font-size:9px;color:#52525b;background:#f4f4f5;border:1px solid #e4e4e7;padding:1px 6px;border-radius:999px">AI</span>
+              <span style="font-size:9px;color:#52525b;background:#f4f4f5;border:1px solid #e4e4e7;padding:1px 6px;border-radius:999px">Data Science</span>
+            </div>
+          </div>
+        </div>
+        <div style="text-align:center;margin-top:6px;font-size:9px;color:#a1a1aa">max-width: ~580px · centered</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A — Narrow centered column</h3>
+      <p>Results capped at ~580px and centered. Keeps reading width comfortable on any screen size, like a blog post.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background:#fafafa;border-radius:8px;padding:12px;font-family:sans-serif;font-size:11px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;max-width:700px;margin:0 auto">
+          <div style="background:#fff;border:1px solid #e4e4e7;border-radius:6px;overflow:hidden">
+            <div style="padding:7px 10px;border-bottom:1px solid #f4f4f5;display:flex;align-items:center;gap:4px">
+              <span style="font-weight:600;color:#18181b;flex:1;font-size:10px">Machine Learning</span>
+              <span style="font-size:8px;color:#16a34a;background:#f0fdf4;border:1px solid #bbf7d0;padding:1px 5px;border-radius:999px">✓</span>
+              <span style="font-size:8px;color:#0e7490;background:#ecfeff;padding:1px 5px;border-radius:999px">High</span>
+            </div>
+            <div style="padding:7px 10px">
+              <p style="margin:0 0 5px;color:#52525b;font-size:9px;line-height:1.5">A subfield of AI that enables systems to learn from experience.</p>
+              <div style="display:flex;gap:3px">
+                <span style="font-size:8px;color:#52525b;background:#f4f4f5;border:1px solid #e4e4e7;padding:1px 5px;border-radius:999px">AI</span>
+              </div>
+            </div>
+          </div>
+          <div style="background:#fff;border:1px solid #e4e4e7;border-radius:6px;overflow:hidden">
+            <div style="padding:7px 10px;border-bottom:1px solid #f4f4f5;display:flex;align-items:center;gap:4px">
+              <span style="font-weight:600;color:#18181b;flex:1;font-size:10px">ML Pipeline</span>
+              <span style="font-size:8px;color:#ca8a04;background:#fefce8;padding:1px 5px;border-radius:999px">Med</span>
+            </div>
+            <div style="padding:7px 10px">
+              <p style="margin:0 0 5px;color:#52525b;font-size:9px;line-height:1.5">Steps that automate the workflow of a machine learning model.</p>
+              <div style="display:flex;gap:3px">
+                <span style="font-size:8px;color:#52525b;background:#f4f4f5;border:1px solid #e4e4e7;padding:1px 5px;border-radius:999px">MLOps</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="text-align:center;margin-top:6px;font-size:9px;color:#a1a1aa">2-column grid on wide screens</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — 2-column grid on wide screens</h3>
+      <p>Results fill the page width in a 2-column grid on large screens, single column on mobile. Uses space efficiently.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background:#fafafa;border-radius:8px;padding:12px;font-family:sans-serif;font-size:11px">
+        <div style="max-width:760px;margin:0 auto">
+          <div style="background:#fff;border:1px solid #e4e4e7;border-radius:6px;overflow:hidden;margin-bottom:6px">
+            <div style="padding:8px 12px;border-bottom:1px solid #f4f4f5;display:flex;align-items:center;gap:6px">
+              <span style="font-weight:600;color:#18181b;flex:1">Machine Learning</span>
+              <span style="font-size:9px;color:#16a34a;background:#f0fdf4;border:1px solid #bbf7d0;padding:1px 6px;border-radius:999px">✓ Explained</span>
+              <span style="font-size:9px;color:#0e7490;background:#ecfeff;padding:1px 6px;border-radius:999px">High</span>
+              <div style="width:1px;height:14px;background:#e4e4e7"></div>
+              <span style="font-size:9px;color:#52525b;border:1px solid #e4e4e7;padding:1px 6px;border-radius:5px">Ask</span>
+              <span style="font-size:9px;color:#52525b;border:1px solid #e4e4e7;padding:1px 6px;border-radius:5px">View</span>
+            </div>
+            <div style="padding:8px 12px">
+              <p style="margin:0 0 6px;color:#52525b;font-size:10px;line-height:1.6">A subfield of AI that enables systems to learn from experience without being explicitly programmed.</p>
+              <div style="display:flex;gap:4px">
+                <span style="font-size:9px;color:#52525b;background:#f4f4f5;border:1px solid #e4e4e7;padding:1px 6px;border-radius:999px">AI</span>
+              </div>
+            </div>
+          </div>
+          <div style="background:#fff;border:1px solid #e4e4e7;border-radius:6px;overflow:hidden">
+            <div style="padding:8px 12px;border-bottom:1px solid #f4f4f5;display:flex;align-items:center;gap:6px">
+              <span style="font-weight:600;color:#18181b;flex:1">ML Pipeline</span>
+              <span style="font-size:9px;color:#ca8a04;background:#fefce8;padding:1px 6px;border-radius:999px">Medium</span>
+              <div style="width:1px;height:14px;background:#e4e4e7"></div>
+              <span style="font-size:9px;color:#52525b;border:1px solid #e4e4e7;padding:1px 6px;border-radius:5px">Ask</span>
+              <span style="font-size:9px;color:#52525b;border:1px solid #e4e4e7;padding:1px 6px;border-radius:5px">View</span>
+            </div>
+            <div style="padding:8px 12px">
+              <p style="margin:0 0 6px;color:#52525b;font-size:10px;line-height:1.6">Steps automating the ML workflow from data ingestion to deployment.</p>
+              <div style="display:flex;gap:4px">
+                <span style="font-size:9px;color:#52525b;background:#f4f4f5;border:1px solid #e4e4e7;padding:1px 6px;border-radius:999px">MLOps</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="text-align:center;margin-top:6px;font-size:9px;color:#a1a1aa">max-width: ~760px · matches existing page container</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C — Match existing page max-width</h3>
+      <p>Results use the same max-width as the rest of the app (like the terms table). Consistent with existing layout.</p>
+    </div>
+  </div>
+
+</div>
