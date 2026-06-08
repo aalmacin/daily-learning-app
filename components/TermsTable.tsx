@@ -25,6 +25,7 @@ import { addToNotion, syncWithNotion } from '@/actions/notion';
 import { updateTermCategories } from '@/actions/categories';
 import type { Term, Category, Priority } from '@/lib/db';
 import { CategoryMultiSelectDropdown } from '@/components/CategoryMultiSelectDropdown';
+import { TermSearchResults } from '@/components/TermSearchResults';
 
 const PRIORITIES: Priority[] = ['High', 'Medium', 'Low'];
 const PAGE_SIZE_OPTIONS = [10, 25, 50];
@@ -494,6 +495,14 @@ export function TermsTable({
   });
 
   const categoryNames = allCategories.map((c) => c.name);
+
+  if (currentQ) {
+    return (
+      <div className="space-y-4">
+        <TermSearchResults terms={terms} q={currentQ} />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
