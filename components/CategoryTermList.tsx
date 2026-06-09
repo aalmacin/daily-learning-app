@@ -8,12 +8,14 @@ import type { CategoryTerm } from '@/lib/db';
 function CategoryTermRow({ item }: { item: CategoryTerm }) {
   const [isExpanded, setIsExpanded] = useState(false);
 
+  const handleToggle = () => setIsExpanded((prev) => !prev);
+
   return (
     <div className="border-b border-zinc-100 dark:border-zinc-800 last:border-b-0">
       <div className="flex items-center gap-3 px-4 py-3 bg-white dark:bg-zinc-900">
         <button
           type="button"
-          onClick={() => setIsExpanded((prev) => !prev)}
+          onClick={handleToggle}
           className="shrink-0 p-1 text-zinc-400 dark:text-zinc-600 hover:text-zinc-600 dark:hover:text-zinc-400 transition-colors"
           aria-label={isExpanded ? 'Collapse' : 'Expand'}
         >
@@ -37,9 +39,9 @@ function CategoryTermRow({ item }: { item: CategoryTerm }) {
         </span>
 
         <div className="hidden sm:flex flex-wrap gap-1 max-w-[200px]">
-          {item.categories.map((cat) => (
+          {item.categories.map((cat, i) => (
             <span
-              key={cat}
+              key={`${cat}-${i}`}
               className="px-2 py-0.5 text-xs rounded-full bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 whitespace-nowrap"
             >
               {cat}
