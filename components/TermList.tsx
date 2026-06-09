@@ -20,10 +20,9 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useMutation } from '@tanstack/react-query';
-import { removeFromTermList, reorderTermList, getTermDetailForList } from '@/actions/termList';
-import type { TermDetailData } from '@/actions/termList';
+import { removeFromTermList, reorderTermList } from '@/actions/termList';
 import type { TermListItem } from '@/lib/db';
-import { TermDetailPage } from '@/components/TermDetailPage';
+import { TermExpandedPanel } from '@/components/TermExpandedPanel';
 
 function formatDate(position: number): string {
   const date = new Date();
@@ -67,9 +66,6 @@ function TermListRow({
   });
 
   const [isExpanded, setIsExpanded] = useState(false);
-  const [termData, setTermData] = useState<TermDetailData | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [fetchError, setFetchError] = useState<string | null>(null);
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -77,21 +73,8 @@ function TermListRow({
     opacity: isDragging ? 0.5 : 1,
   };
 
-  const handleToggle = async () => {
-    const expanding = !isExpanded;
-    setIsExpanded(expanding);
-    if (expanding && !termData) {
-      setIsLoading(true);
-      setFetchError(null);
-      try {
-        const data = await getTermDetailForList(item.term.id);
-        setTermData(data);
-      } catch (e) {
-        setFetchError(e instanceof Error ? e.message : 'Failed to load');
-      } finally {
-        setIsLoading(false);
-      }
-    }
+  const handleToggle = () => {
+    setIsExpanded((prev) => !prev);
   };
 
   return (
@@ -162,36 +145,7 @@ function TermListRow({
 
       {isExpanded && (
         <div className="border-t border-zinc-100 dark:border-zinc-800">
-          {isLoading && (
-            <div className="flex items-center gap-2 px-4 py-6 text-sm text-zinc-500 dark:text-zinc-400">
-              <svg
-                className="animate-spin shrink-0"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-              </svg>
-              Loading…
-            </div>
-          )}
-          {fetchError && (
-            <p className="px-4 py-4 text-sm text-red-600 dark:text-red-400">{fetchError}</p>
-          )}
-          {termData && (
-            <TermDetailPage
-              term={termData.term}
-              initialRefinements={termData.refinements}
-              initialChats={termData.chats}
-              explainedAt={termData.explainedAt}
-              initialFlashcards={termData.flashcards}
-            />
-          )}
+          <TermExpandedPanel termId={item.term.id} />
         </div>
       )}
     </div>
