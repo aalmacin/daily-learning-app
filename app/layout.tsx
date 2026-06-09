@@ -6,6 +6,7 @@ import { Providers } from "@/components/Providers";
 import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration";
 import NavMenu from "@/components/NavMenu";
 import { SearchBar } from "@/components/SearchBar";
+import { GlobalSearch } from "@/components/GlobalSearch";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import "./globals.css";
 
@@ -64,7 +65,10 @@ export default async function RootLayout({
             )}
           </div>
         </header>
-        <Providers>{children}</Providers>
+        <Providers>
+          {children}
+          {user && <GlobalSearch />}
+        </Providers>
         <ServiceWorkerRegistration />
       </body>
     </html>
