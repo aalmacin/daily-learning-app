@@ -15,7 +15,8 @@ export default async function CategoryPage({
   if (isNaN(categoryId)) notFound();
 
   const user = await getCurrentUser();
-  const userId = user!.id;
+  if (!user) notFound();
+  const userId = user.id;
 
   const [categories, terms] = await Promise.all([
     getAllCategories(userId),
