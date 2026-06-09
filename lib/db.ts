@@ -1191,21 +1191,22 @@ export async function getTermsByCategory(userId: string, categoryId: number): Pr
   const termIds = (links as { term_id: number }[]).map((l) => l.term_id);
   if (termIds.length === 0) return [];
 
-  const { data: terms, error: termsError } = await getSupabase()
-    .from('terms')
-    .select('id, name')
-    .eq('user_id', userId)
-    .in('id', termIds)
-    .order('name', { ascending: true });
-  if (termsError) throw termsError;
-  const termRows = terms as { id: number; name: string }[];
-
-  const { data: catLinks, error: catLinksError } = await getSupabase()
-    .from('term_categories')
-    .select('term_id, category_id')
-    .in('term_id', termIds);
-  if (catLinksError) throw catLinksError;
-  const typedCatLinks = catLinks as { term_id: number; category_id: number }[];
+  const [termsResult, catLinksResult] = await Promise.all([
+    getSupabase()
+      .from('terms')
+      .select('id, name')
+      .eq('user_id', userId)
+      .in('id', termIds)
+      .order('name', { ascending: true }),
+    getSupabase()
+      .from('term_categories')
+      .select('term_id, category_id')
+      .in('term_id', termIds),
+  ]);
+  if (termsResult.error) throw termsResult.error;
+  if (catLinksResult.error) throw catLinksResult.error;
+  const termRows = (termsResult.data ?? []) as { id: number; name: string }[];
+  const typedCatLinks = (catLinksResult.data ?? []) as { term_id: number; category_id: number }[];
 
   const allCatIds = [...new Set(typedCatLinks.map((l) => l.category_id))];
   const catNameById = new Map<number, string>();
@@ -1213,6 +1214,7 @@ export async function getTermsByCategory(userId: string, categoryId: number): Pr
     const { data: cats, error: catsErr } = await getSupabase()
       .from('categories')
       .select('id, name')
+      .eq('user_id', userId)
       .in('id', allCatIds);
     if (catsErr) throw catsErr;
     (cats as { id: number; name: string }[]).forEach((c) => catNameById.set(c.id, c.name));
