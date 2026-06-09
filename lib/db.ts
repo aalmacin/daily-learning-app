@@ -34,6 +34,12 @@ export type Category = {
   name: string;
 };
 
+export type CategoryTerm = {
+  id: number;
+  name: string;
+  categories: string[];
+};
+
 export type ConceptRefinement = {
   id: number;
   term_id: number;
@@ -1165,4 +1171,60 @@ export async function reviewFlashcard(id: number, userId: string, correct: boole
     .single();
   if (error) throw error;
   return data as Flashcard;
+}
+
+export async function getTermsByCategory(userId: string, categoryId: number): Promise<CategoryTerm[]> {
+  const { data: cat, error: catError } = await getSupabase()
+    .from('categories')
+    .select('id')
+    .eq('id', categoryId)
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (catError) throw catError;
+  if (!cat) return [];
+
+  const { data: links, error: linksError } = await getSupabase()
+    .from('term_categories')
+    .select('term_id')
+    .eq('category_id', categoryId);
+  if (linksError) throw linksError;
+  const termIds = (links as { term_id: number }[]).map((l) => l.term_id);
+  if (termIds.length === 0) return [];
+
+  const { data: terms, error: termsError } = await getSupabase()
+    .from('terms')
+    .select('id, name')
+    .eq('user_id', userId)
+    .in('id', termIds)
+    .order('name', { ascending: true });
+  if (termsError) throw termsError;
+  const termRows = terms as { id: number; name: string }[];
+
+  const { data: catLinks, error: catLinksError } = await getSupabase()
+    .from('term_categories')
+    .select('term_id, category_id')
+    .in('term_id', termIds);
+  if (catLinksError) throw catLinksError;
+  const typedCatLinks = catLinks as { term_id: number; category_id: number }[];
+
+  const allCatIds = [...new Set(typedCatLinks.map((l) => l.category_id))];
+  const catNameById = new Map<number, string>();
+  if (allCatIds.length > 0) {
+    const { data: cats, error: catsErr } = await getSupabase()
+      .from('categories')
+      .select('id, name')
+      .in('id', allCatIds);
+    if (catsErr) throw catsErr;
+    (cats as { id: number; name: string }[]).forEach((c) => catNameById.set(c.id, c.name));
+  }
+
+  return termRows.map((t) => ({
+    id: t.id,
+    name: t.name,
+    categories: typedCatLinks
+      .filter((l) => l.term_id === t.id)
+      .map((l) => catNameById.get(l.category_id))
+      .filter((n): n is string => n != null)
+      .sort(),
+  }));
 }
