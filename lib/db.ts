@@ -34,6 +34,12 @@ export type Category = {
   name: string;
 };
 
+export type CategoryTerm = {
+  id: number;
+  name: string;
+  categories: string[];
+};
+
 export type ConceptRefinement = {
   id: number;
   term_id: number;
@@ -1165,4 +1171,75 @@ export async function reviewFlashcard(id: number, userId: string, correct: boole
     .single();
   if (error) throw error;
   return data as Flashcard;
+}
+
+export async function getTermsByCategory(userId: string, categoryId: number): Promise<CategoryTerm[]> {
+  const { data: cat, error: catError } = await getSupabase()
+    .from('categories')
+    .select('id')
+    .eq('id', categoryId)
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (catError) throw catError;
+  if (!cat) return [];
+
+  const { data: links, error: linksError } = await getSupabase()
+    .from('term_categories')
+    .select('term_id')
+    .eq('category_id', categoryId);
+  if (linksError) throw linksError;
+  const termIds = (links as { term_id: number }[]).map((l) => l.term_id);
+  if (termIds.length === 0) return [];
+
+  const [termsResult, catLinksResult] = await Promise.all([
+    getSupabase()
+      .from('terms')
+      .select('id, name, priority, concept_refinements!left(id)')
+      .eq('user_id', userId)
+      .in('id', termIds)
+      .not('concept_refinements.refinement_formatted_note', 'is', null),
+    getSupabase()
+      .from('term_categories')
+      .select('term_id, category_id')
+      .in('term_id', termIds),
+  ]);
+  if (termsResult.error) throw termsResult.error;
+  if (catLinksResult.error) throw catLinksResult.error;
+  const termRows = (termsResult.data ?? []) as { id: number; name: string; priority: string; concept_refinements: { id: number }[] }[];
+  const typedCatLinks = (catLinksResult.data ?? []) as { term_id: number; category_id: number }[];
+
+  const allCatIds = [...new Set(typedCatLinks.map((l) => l.category_id))];
+  const catNameById = new Map<number, string>();
+  if (allCatIds.length > 0) {
+    const { data: cats, error: catsErr } = await getSupabase()
+      .from('categories')
+      .select('id, name')
+      .eq('user_id', userId)
+      .in('id', allCatIds);
+    if (catsErr) throw catsErr;
+    (cats as { id: number; name: string }[]).forEach((c) => catNameById.set(c.id, c.name));
+  }
+
+  const PRIORITY_ORDER = { High: 0, Medium: 1, Low: 2 } as const;
+
+  const items = termRows.map((t) => ({
+    id: t.id,
+    name: t.name,
+    categories: typedCatLinks
+      .filter((l) => l.term_id === t.id)
+      .map((l) => catNameById.get(l.category_id))
+      .filter((n): n is string => n != null)
+      .sort(),
+    explained: t.concept_refinements.length > 0,
+    priority: t.priority,
+  }));
+
+  items.sort((a, b) => {
+    if (a.explained !== b.explained) return a.explained ? 1 : -1;
+    const pa = PRIORITY_ORDER[a.priority as keyof typeof PRIORITY_ORDER] ?? 3;
+    const pb = PRIORITY_ORDER[b.priority as keyof typeof PRIORITY_ORDER] ?? 3;
+    return pa - pb;
+  });
+
+  return items.map(({ id, name, categories }) => ({ id, name, categories }));
 }

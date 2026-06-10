@@ -87,7 +87,7 @@ export function CategoriesManager({ initialData }: { initialData: Category[] }) 
                 <span className="text-sm text-zinc-800 dark:text-zinc-200">{cat.name}</span>
                 <div className="flex items-center gap-3">
                   <Link
-                    href={`/terms?category=${encodeURIComponent(cat.name)}`}
+                    href={`/categories/${cat.id}`}
                     className="text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
                   >
                     View Terms
