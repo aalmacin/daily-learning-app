@@ -126,6 +126,7 @@ export async function addRefinementToNotion(termId: number, refinementId: number
     settings.timezone,
     chats,
     term.notion_date ?? undefined,
+    term.notes,
   );
 
   revalidatePath(`/terms/${termId}`);

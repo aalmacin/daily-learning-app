@@ -5,6 +5,7 @@ import Link from 'next/link';
 import type { Term, ChatMessage } from '@/lib/db';
 import { createAttempt } from '@/actions/refinements';
 import { askQuestion } from '@/actions/chat';
+import { ResearchTabs } from './ResearchTabs';
 
 type Props = {
   terms: Term[];
@@ -60,12 +61,9 @@ function ResearchChat({ term }: { term: Term }) {
   }
 
   return (
-    <div className="border border-zinc-200 dark:border-zinc-700 rounded-lg overflow-hidden">
-      <div className="px-3 py-2 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 flex items-center justify-between">
-        <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Research</span>
-      </div>
+    <div>
       {chat && chat.messages.length > 0 && (
-        <div className="px-3 py-2 flex flex-col gap-2 max-h-64 overflow-y-auto">
+        <div className="px-1 py-1 flex flex-col gap-2 max-h-64 overflow-y-auto">
           {chat.messages.map((msg) => (
             <div
               key={msg.id}
@@ -80,10 +78,8 @@ function ResearchChat({ term }: { term: Term }) {
           ))}
         </div>
       )}
-      {error && (
-        <p className="px-3 py-1 text-xs text-red-600 dark:text-red-400">{error}</p>
-      )}
-      <form onSubmit={handleSubmit} className="px-3 py-2 border-t border-zinc-100 dark:border-zinc-800 flex gap-2">
+      {error && <p className="px-1 py-1 text-xs text-red-600 dark:text-red-400">{error}</p>}
+      <form onSubmit={handleSubmit} className="pt-2 flex gap-2">
         <input
           type="text"
           aria-label={`Ask a question about ${term.name}`}
@@ -107,10 +103,10 @@ function ResearchChat({ term }: { term: Term }) {
 
 function TermCard({ term }: { term: Term }) {
   const [expanded, setExpanded] = useState(false);
-  const [chatOpen, setChatOpen] = useState(false);
+  const [researchOpen, setResearchOpen] = useState(false);
 
   return (
-    <div className={`flex flex-col border rounded-lg overflow-hidden bg-white dark:bg-zinc-900 transition-colors ${chatOpen ? 'border-cyan-500 dark:border-cyan-600' : 'border-zinc-200 dark:border-zinc-800'}`}>
+    <div className={`flex flex-col border rounded-lg overflow-hidden bg-white dark:bg-zinc-900 transition-colors ${researchOpen ? 'border-cyan-500 dark:border-cyan-600' : 'border-zinc-200 dark:border-zinc-800'}`}>
       {/* Header — always visible, click to expand */}
       <button
         type="button"
@@ -143,8 +139,20 @@ function TermCard({ term }: { term: Term }) {
           <div className="flex flex-col gap-3 px-4 py-3 border-t border-zinc-100 dark:border-zinc-800">
             <p className="text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">{term.content}</p>
 
-            {chatOpen && (
-              <ResearchChat term={term} />
+            {researchOpen && (
+              <div className="border border-cyan-500 dark:border-cyan-600 rounded-lg overflow-hidden">
+                <div className="px-3 py-2 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Research</span>
+                </div>
+                <div className="px-3 py-2">
+                  <ResearchTabs
+                    termId={term.id}
+                    initialMarkdown={term.notes}
+                    accent="cyan"
+                    chat={<ResearchChat term={term} />}
+                  />
+                </div>
+              </div>
             )}
 
             {term.categories.length > 0 && (
@@ -165,9 +173,9 @@ function TermCard({ term }: { term: Term }) {
           <div className="px-4 py-2 border-t border-zinc-100 dark:border-zinc-800 flex gap-2">
             <button
               type="button"
-              onClick={() => setChatOpen((o) => !o)}
+              onClick={() => setResearchOpen((o) => !o)}
               className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md border text-xs font-medium transition-colors ${
-                chatOpen
+                researchOpen
                   ? 'border-cyan-500 bg-cyan-50 text-cyan-700 dark:border-cyan-600 dark:bg-cyan-950 dark:text-cyan-300'
                   : 'border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800'
               }`}
@@ -175,7 +183,7 @@ function TermCard({ term }: { term: Term }) {
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
               </svg>
-              Ask
+              Research
             </button>
             <Link
               href={`/terms/${term.id}`}

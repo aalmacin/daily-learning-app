@@ -15,6 +15,7 @@ import {
 } from '@/actions/refinements';
 import { addToNotion } from '@/actions/notion';
 import { askQuestion } from '@/actions/chat';
+import { ResearchTabs } from './ResearchTabs';
 
 type Props = {
   term: Term;
@@ -393,27 +394,36 @@ export function TermDetailPage({ term, initialRefinements, initialChats, explain
               <p className="text-xs text-zinc-500 dark:text-zinc-400">
                 Do your research now, then come back to explain the concept again. Ask questions below as you study.
               </p>
-              {error && (
-                <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
-              )}
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={chatInput}
-                  onChange={(e) => setChatInput(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleStartResearch()}
-                  placeholder={`Ask a question about ${term.name}…`}
-                  disabled={isPendingChat}
-                  className="flex-1 px-3 py-2 text-xs border border-zinc-200 dark:border-zinc-700 rounded-lg bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:focus:ring-zinc-600 disabled:opacity-50"
-                />
-                <button
-                  onClick={handleStartResearch}
-                  disabled={!chatInput.trim() || isPendingChat}
-                  className="px-3 py-2 text-xs font-medium rounded-lg bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 hover:bg-zinc-700 dark:hover:bg-zinc-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                >
-                  {isPendingChat ? 'Starting…' : 'Ask'}
-                </button>
-              </div>
+              <ResearchTabs
+                termId={term.id}
+                initialMarkdown={term.notes}
+                accent="zinc"
+                chat={
+                  <>
+                    {error && (
+                      <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
+                    )}
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={chatInput}
+                        onChange={(e) => setChatInput(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleStartResearch()}
+                        placeholder={`Ask a question about ${term.name}…`}
+                        disabled={isPendingChat}
+                        className="flex-1 px-3 py-2 text-xs border border-zinc-200 dark:border-zinc-700 rounded-lg bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:focus:ring-zinc-600 disabled:opacity-50"
+                      />
+                      <button
+                        onClick={handleStartResearch}
+                        disabled={!chatInput.trim() || isPendingChat}
+                        className="px-3 py-2 text-xs font-medium rounded-lg bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 hover:bg-zinc-700 dark:hover:bg-zinc-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                      >
+                        {isPendingChat ? 'Starting…' : 'Ask'}
+                      </button>
+                    </div>
+                  </>
+                }
+              />
             </div>
           )}
 
@@ -512,53 +522,62 @@ export function TermDetailPage({ term, initialRefinements, initialChats, explain
                     })}
                   </div>
                 )}
-                {/* Chat messages */}
-                {(allChats[viewing.id] ?? []).length > 0 && (
-                  <div className="space-y-2 max-h-80 overflow-y-auto rounded-lg border border-zinc-200 dark:border-zinc-700 p-3">
-                    {(allChats[viewing.id] ?? []).map((msg) => (
-                      <div
-                        key={msg.id}
-                        className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                      >
-                        <p
-                          className={`max-w-[85%] rounded-lg px-3 py-2 text-xs leading-5 ${
-                            msg.role === 'user'
-                              ? 'bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900'
-                              : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300'
-                          }`}
+                <ResearchTabs
+                  termId={term.id}
+                  initialMarkdown={term.notes}
+                  accent="zinc"
+                  chat={
+                    <>
+                      {/* Chat messages */}
+                      {(allChats[viewing.id] ?? []).length > 0 && (
+                        <div className="space-y-2 max-h-80 overflow-y-auto rounded-lg border border-zinc-200 dark:border-zinc-700 p-3">
+                          {(allChats[viewing.id] ?? []).map((msg) => (
+                            <div
+                              key={msg.id}
+                              className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                            >
+                              <p
+                                className={`max-w-[85%] rounded-lg px-3 py-2 text-xs leading-5 ${
+                                  msg.role === 'user'
+                                    ? 'bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900'
+                                    : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300'
+                                }`}
+                              >
+                                {msg.content}
+                              </p>
+                            </div>
+                          ))}
+                          {isPendingChat && (
+                            <div className="flex justify-start">
+                              <p className="max-w-[85%] rounded-lg px-3 py-2 text-xs bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500">
+                                Thinking…
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {/* Chat input */}
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={chatInput}
+                          onChange={(e) => setChatInput(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleAskQuestion(viewing.id)}
+                          placeholder={`Ask a question about ${term.name}…`}
+                          disabled={isPendingChat}
+                          className="flex-1 px-3 py-2 text-xs border border-zinc-200 dark:border-zinc-700 rounded-lg bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:focus:ring-zinc-600 disabled:opacity-50"
+                        />
+                        <button
+                          onClick={() => handleAskQuestion(viewing.id)}
+                          disabled={!chatInput.trim() || isPendingChat}
+                          className="px-3 py-2 text-xs font-medium rounded-lg bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 hover:bg-zinc-700 dark:hover:bg-zinc-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                         >
-                          {msg.content}
-                        </p>
+                          Ask
+                        </button>
                       </div>
-                    ))}
-                    {isPendingChat && (
-                      <div className="flex justify-start">
-                        <p className="max-w-[85%] rounded-lg px-3 py-2 text-xs bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500">
-                          Thinking…
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                )}
-                {/* Chat input */}
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={chatInput}
-                    onChange={(e) => setChatInput(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleAskQuestion(viewing.id)}
-                    placeholder={`Ask a question about ${term.name}…`}
-                    disabled={isPendingChat}
-                    className="flex-1 px-3 py-2 text-xs border border-zinc-200 dark:border-zinc-700 rounded-lg bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:focus:ring-zinc-600 disabled:opacity-50"
-                  />
-                  <button
-                    onClick={() => handleAskQuestion(viewing.id)}
-                    disabled={!chatInput.trim() || isPendingChat}
-                    className="px-3 py-2 text-xs font-medium rounded-lg bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 hover:bg-zinc-700 dark:hover:bg-zinc-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                  >
-                    Ask
-                  </button>
-                </div>
+                    </>
+                  }
+                />
               </div>
 
               {/* Step 3 — Refinement (requires cold explanation evaluation, or skipped if no cold explanation) */}
