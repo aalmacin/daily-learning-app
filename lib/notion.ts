@@ -232,6 +232,7 @@ export async function appendRefinementToNotionPage(
   timezone = 'UTC',
   chats: ChatMessage[] = [],
   date?: string,
+  notes?: string | null,
 ): Promise<void> {
   const client = getClient(credentials);
   const dateStr = date ?? localeDateStr(timezone);
@@ -295,6 +296,16 @@ export async function appendRefinementToNotionPage(
         },
       },
       ...parseMarkdownToNotionBlocks(refinement.refinement_additional_note),
+      ...(notes && notes.trim().length > 0
+        ? [
+            {
+              object: 'block',
+              type: 'heading_2',
+              heading_2: { rich_text: [{ type: 'text', text: { content: 'My Notes' } }] },
+            } as BlockObjectRequest,
+            ...parseMarkdownToNotionBlocks(notes),
+          ]
+        : []),
       ...(chats.length > 0
         ? [
             {

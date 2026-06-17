@@ -27,6 +27,7 @@ export type Term = {
   flashcard_count: number;
   daily_learning_done: boolean;
   notion_date: string | null;
+  notes: string | null;
 };
 
 export type Category = {
@@ -335,7 +336,7 @@ export async function getAllTerms(userId: string): Promise<Term[]> {
   }));
 }
 
-export async function insertTerm(term: Omit<Term, 'id' | 'created_at' | 'explained' | 'explained_at' | 'flashcard_count'>, userId: string): Promise<Term> {
+export async function insertTerm(term: Omit<Term, 'id' | 'created_at' | 'explained' | 'explained_at' | 'flashcard_count' | 'notes'>, userId: string): Promise<Term> {
   const { data, error } = await getSupabase()
     .from('terms')
     .insert({
@@ -365,6 +366,7 @@ export async function updateTerm(
   if (updates.content !== undefined) fields.content = updates.content;
   if (updates.notion_page_id !== undefined) fields.notion_page_id = updates.notion_page_id;
   if (updates.priority !== undefined) fields.priority = updates.priority;
+  if (updates.notes !== undefined) fields.notes = updates.notes;
 
   let row: TermRow;
   if (Object.keys(fields).length > 0) {
@@ -441,7 +443,7 @@ export const getTermById = cache(async (id: number): Promise<Term | null> => {
   const { data, error } = await getSupabase()
     .from('terms')
     .select(
-      'id, name, content, created_at, updated_at, notion_page_id, notion_last_edited, last_synced_at, priority, daily_learning_done, notion_date, term_categories(categories(name)), concept_refinements!left(id)'
+      'id, name, content, created_at, updated_at, notion_page_id, notion_last_edited, last_synced_at, priority, daily_learning_done, notion_date, notes, term_categories(categories(name)), concept_refinements!left(id)'
     )
     .eq('id', id)
     .not('concept_refinements.refinement_formatted_note', 'is', null)
@@ -471,6 +473,7 @@ export const getTermById = cache(async (id: number): Promise<Term | null> => {
     priority: row.priority,
     daily_learning_done: row.daily_learning_done,
     notion_date: row.notion_date,
+    notes: row.notes,
     categories,
     explained,
     explained_at: row.notion_date,
