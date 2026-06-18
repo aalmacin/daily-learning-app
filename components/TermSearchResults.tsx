@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition, useEffect } from 'react';
+import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import type { Term, ChatMessage } from '@/lib/db';
 import { createAttempt } from '@/actions/refinements';
@@ -207,10 +207,12 @@ function TermCard({ term }: { term: Term }) {
 
 export function TermSearchResults({ terms, q, onTermExplained }: Props) {
   const [showAddForm, setShowAddForm] = useState(false);
+  const [prevQ, setPrevQ] = useState(q);
 
-  useEffect(() => {
+  if (prevQ !== q) {
+    setPrevQ(q);
     setShowAddForm(false);
-  }, [q]);
+  }
 
   const isExactMatch = terms.some(
     (t) => t.name.toLowerCase() === q.toLowerCase()
