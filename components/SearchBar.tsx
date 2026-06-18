@@ -10,8 +10,13 @@ export function SearchBar() {
   const [results, setResults] = useState<Term[] | null>(null);
   const [isPending, startTransition] = useTransition();
   const containerRef = useRef<HTMLDivElement>(null);
+  const refreshQueryRef = useRef<string>('');
 
   const overlayOpen = query.trim() !== '' && (results !== null || isPending);
+
+  useEffect(() => {
+    refreshQueryRef.current = '';
+  }, [query]);
 
   useEffect(() => {
     const trimmed = query.trim();
@@ -48,9 +53,10 @@ export function SearchBar() {
   const refreshSearch = useCallback(() => {
     const trimmed = query.trim();
     if (!trimmed) return;
+    refreshQueryRef.current = trimmed;
     startTransition(async () => {
       const terms = await searchTerms(trimmed);
-      setResults(terms);
+      if (refreshQueryRef.current === trimmed) setResults(terms);
     });
   }, [query]);
 

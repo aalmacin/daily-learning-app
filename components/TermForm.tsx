@@ -61,6 +61,8 @@ export function TermForm({ defaultTerm, compact, onExplainComplete }: Props = {}
   const inputClass =
     'w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-sm text-zinc-900 dark:text-zinc-50 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-500'
 
+  const datalistId = compact ? 'recent-contexts-list-compact' : 'recent-contexts-list'
+
   const singleModeForm = (
     <form
       onSubmit={(e) => {
@@ -114,7 +116,7 @@ export function TermForm({ defaultTerm, compact, onExplainComplete }: Props = {}
               onChange={(e) => field.handleChange(e.target.value)}
               onBlur={field.handleBlur}
               placeholder="e.g. Kubernetes, AWS, React"
-              list="recent-contexts-list"
+              list={datalistId}
               className={inputClass}
             />
           </div>
@@ -136,7 +138,7 @@ export function TermForm({ defaultTerm, compact, onExplainComplete }: Props = {}
   )
 
   const datalist = (
-    <datalist id="recent-contexts-list">
+    <datalist id={datalistId}>
       {recentContexts.map((ctx) => (
         <option key={ctx} value={ctx} />
       ))}
