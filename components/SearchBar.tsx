@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useTransition } from 'react';
+import { useState, useEffect, useRef, useTransition, useCallback } from 'react';
 import { searchTerms } from '@/actions/terms';
 import { TermSearchResults } from '@/components/TermSearchResults';
 import type { Term } from '@/lib/db';
@@ -10,8 +10,13 @@ export function SearchBar() {
   const [results, setResults] = useState<Term[] | null>(null);
   const [isPending, startTransition] = useTransition();
   const containerRef = useRef<HTMLDivElement>(null);
+  const refreshQueryRef = useRef<string>('');
 
   const overlayOpen = query.trim() !== '' && (results !== null || isPending);
+
+  useEffect(() => {
+    refreshQueryRef.current = '';
+  }, [query]);
 
   useEffect(() => {
     const trimmed = query.trim();
@@ -44,6 +49,16 @@ export function SearchBar() {
     setQuery('');
     setResults(null);
   }
+
+  const refreshSearch = useCallback(() => {
+    const trimmed = query.trim();
+    if (!trimmed) return;
+    refreshQueryRef.current = trimmed;
+    startTransition(async () => {
+      const terms = await searchTerms(trimmed);
+      if (refreshQueryRef.current === trimmed) setResults(terms);
+    });
+  }, [query]);
 
   return (
     <div ref={containerRef} className="relative min-w-[120px] max-w-[280px] w-[30%]">
@@ -87,7 +102,7 @@ export function SearchBar() {
             {isPending ? (
               <p className="text-sm text-zinc-500 dark:text-zinc-400">Searching…</p>
             ) : (
-              <TermSearchResults terms={results!} q={query} />
+              <TermSearchResults terms={results!} q={query} onTermExplained={refreshSearch} />
             )}
           </div>
         </div>
