@@ -8,13 +8,19 @@ import { useRecentContexts } from '@/lib/useRecentContexts'
 
 type Mode = 'single' | 'multiple'
 
-export function TermForm() {
+type Props = {
+  defaultTerm?: string
+  compact?: boolean
+  onExplainComplete?: () => void
+}
+
+export function TermForm({ defaultTerm, compact, onExplainComplete }: Props = {}) {
   const [mode, setMode] = useState<Mode>('single')
   const [submitAttempted, setSubmitAttempted] = useState(false)
   const { recentContexts, saveContext } = useRecentContexts()
 
   const singleForm = useForm({
-    defaultValues: { termName: '', context: '' },
+    defaultValues: { termName: defaultTerm ?? '', context: '' },
     onSubmit: async ({ value }) => {
       setSubmitAttempted(false)
       const name = value.termName.trim().toLowerCase()
@@ -22,7 +28,10 @@ export function TermForm() {
       saveContext(value.context)
       singleForm.setFieldValue('termName', '')
       explainTerm(value.termName, value.context || undefined)
-        .then((term) => resolveTermResult(name, term))
+        .then((term) => {
+          resolveTermResult(name, term)
+          onExplainComplete?.()
+        })
         .catch((e) => rejectTermResult(name, e instanceof Error ? e.message : 'Something went wrong'))
     },
   })
@@ -51,6 +60,97 @@ export function TermForm() {
   const inputClass =
     'w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-sm text-zinc-900 dark:text-zinc-50 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-500'
 
+  const singleModeForm = (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault()
+        setSubmitAttempted(true)
+        singleForm.handleSubmit()
+      }}
+      className="flex flex-col gap-4"
+    >
+      <singleForm.Field
+        name="termName"
+        validators={{
+          onChange: ({ value }) => {
+            if (!value || value.trim().length === 0) return 'Term name is required'
+            if (value.trim().length < 2) return 'Term name must be at least 2 characters'
+            return undefined
+          },
+        }}
+      >
+        {(field) => (
+          <div className="flex flex-col gap-1">
+            <label htmlFor={field.name} className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+              Term
+            </label>
+            <input
+              id={field.name}
+              name={field.name}
+              value={field.state.value}
+              onChange={(e) => field.handleChange(e.target.value)}
+              onBlur={field.handleBlur}
+              placeholder="e.g. dependency injection"
+              className={inputClass}
+            />
+            {submitAttempted && field.state.meta.errors.length > 0 && (
+              <p className="text-xs text-red-600 dark:text-red-400">{field.state.meta.errors[0]}</p>
+            )}
+          </div>
+        )}
+      </singleForm.Field>
+
+      <singleForm.Field name="context">
+        {(field) => (
+          <div className="flex flex-col gap-1">
+            <label htmlFor={field.name} className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+              Context <span className="text-zinc-400 dark:text-zinc-500 font-normal">(optional)</span>
+            </label>
+            <input
+              id={field.name}
+              name={field.name}
+              value={field.state.value}
+              onChange={(e) => field.handleChange(e.target.value)}
+              onBlur={field.handleBlur}
+              placeholder="e.g. Kubernetes, AWS, React"
+              list="recent-contexts-list"
+              className={inputClass}
+            />
+          </div>
+        )}
+      </singleForm.Field>
+
+      <singleForm.Subscribe selector={(state) => state.isSubmitting}>
+        {(isSubmitting) => (
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="self-start rounded-lg bg-zinc-900 dark:bg-zinc-50 px-4 py-2 text-sm font-medium text-white dark:text-zinc-900 hover:bg-zinc-700 dark:hover:bg-zinc-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isSubmitting ? 'Explaining…' : 'Explain'}
+          </button>
+        )}
+      </singleForm.Subscribe>
+    </form>
+  )
+
+  const datalist = (
+    <datalist id="recent-contexts-list">
+      {recentContexts.map((ctx) => (
+        <option key={ctx} value={ctx} />
+      ))}
+    </datalist>
+  )
+
+  if (compact) {
+    return (
+      <div className="flex flex-col gap-4">
+        {singleModeForm}
+        {datalist}
+      </div>
+    )
+  }
+
   return (
     <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-6">
       <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 mb-4">Explain a Term</h2>
@@ -73,72 +173,7 @@ export function TermForm() {
       </div>
 
       {mode === 'single' ? (
-        <form
-          onSubmit={(e) => {
-            e.preventDefault()
-            setSubmitAttempted(true)
-            singleForm.handleSubmit()
-          }}
-          className="flex flex-col gap-4"
-        >
-          <singleForm.Field
-            name="termName"
-            validators={{
-              onChange: ({ value }) => {
-                if (!value || value.trim().length === 0) return 'Term name is required'
-                if (value.trim().length < 2) return 'Term name must be at least 2 characters'
-                return undefined
-              },
-            }}
-          >
-            {(field) => (
-              <div className="flex flex-col gap-1">
-                <label htmlFor={field.name} className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                  Term
-                </label>
-                <input
-                  id={field.name}
-                  name={field.name}
-                  value={field.state.value}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  onBlur={field.handleBlur}
-                  placeholder="e.g. dependency injection"
-                  className={inputClass}
-                />
-                {submitAttempted && field.state.meta.errors.length > 0 && (
-                  <p className="text-xs text-red-600 dark:text-red-400">{field.state.meta.errors[0]}</p>
-                )}
-              </div>
-            )}
-          </singleForm.Field>
-
-          <singleForm.Field name="context">
-            {(field) => (
-              <div className="flex flex-col gap-1">
-                <label htmlFor={field.name} className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                  Context <span className="text-zinc-400 dark:text-zinc-500 font-normal">(optional)</span>
-                </label>
-                <input
-                  id={field.name}
-                  name={field.name}
-                  value={field.state.value}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  onBlur={field.handleBlur}
-                  placeholder="e.g. Kubernetes, AWS, React"
-                  list="recent-contexts-list"
-                  className={inputClass}
-                />
-              </div>
-            )}
-          </singleForm.Field>
-
-          <button
-            type="submit"
-            className="self-start rounded-lg bg-zinc-900 dark:bg-zinc-50 px-4 py-2 text-sm font-medium text-white dark:text-zinc-900 hover:bg-zinc-700 dark:hover:bg-zinc-200 transition-colors"
-          >
-            Explain
-          </button>
-        </form>
+        singleModeForm
       ) : (
         <form
           onSubmit={(e) => {
@@ -211,11 +246,7 @@ export function TermForm() {
         </form>
       )}
 
-      <datalist id="recent-contexts-list">
-        {recentContexts.map((ctx) => (
-          <option key={ctx} value={ctx} />
-        ))}
-      </datalist>
+      {datalist}
     </div>
   )
 }
