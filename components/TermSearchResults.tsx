@@ -6,10 +6,12 @@ import type { Term, ChatMessage } from '@/lib/db';
 import { createAttempt } from '@/actions/refinements';
 import { askQuestion } from '@/actions/chat';
 import { ResearchTabs } from './ResearchTabs';
+import { TermForm } from '@/components/TermForm';
 
 type Props = {
   terms: Term[];
   q: string;
+  onTermExplained?: () => void;
 };
 
 type ChatState = {
@@ -203,12 +205,16 @@ function TermCard({ term }: { term: Term }) {
   );
 }
 
-export function TermSearchResults({ terms, q }: Props) {
+export function TermSearchResults({ terms, q, onTermExplained }: Props) {
   if (terms.length === 0) {
     return (
-      <p className="text-sm text-zinc-500 dark:text-zinc-400">
-        No terms found for &ldquo;{q}&rdquo;.
-      </p>
+      <div className="flex flex-col gap-4">
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">
+          No terms found for &ldquo;{q}&rdquo;.
+        </p>
+        <hr className="border-zinc-200 dark:border-zinc-800" />
+        <TermForm defaultTerm={q} compact onExplainComplete={onTermExplained} />
+      </div>
     );
   }
 
