@@ -230,9 +230,30 @@ export function TermSearchResults({ terms, q, onTermExplained }: Props) {
 
   return (
     <div className="space-y-3">
-      <p className="text-sm text-zinc-500 dark:text-zinc-400">
-        {terms.length} result{terms.length !== 1 ? 's' : ''} for &ldquo;{q}&rdquo;
-      </p>
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">
+          {terms.length} result{terms.length !== 1 ? 's' : ''} for &ldquo;{q}&rdquo;
+        </p>
+        {!isExactMatch && !showAddForm && (
+          <button
+            type="button"
+            onClick={() => setShowAddForm(true)}
+            className="text-xs font-medium px-2.5 py-1 rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+          >
+            Add &ldquo;{q}&rdquo;
+          </button>
+        )}
+      </div>
+      {showAddForm && (
+        <TermForm
+          defaultTerm={q}
+          compact
+          onExplainComplete={() => {
+            setShowAddForm(false);
+            onTermExplained?.();
+          }}
+        />
+      )}
       <div className="grid grid-cols-1 gap-3">
         {terms.map((term) => (
           <TermCard key={term.id} term={term} />
