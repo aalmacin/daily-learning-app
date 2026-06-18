@@ -27,12 +27,13 @@ export function TermForm({ defaultTerm, compact, onExplainComplete }: Props = {}
       addPendingTerm(name)
       saveContext(value.context)
       singleForm.setFieldValue('termName', '')
-      explainTerm(value.termName, value.context || undefined)
-        .then((term) => {
-          resolveTermResult(name, term)
-          onExplainComplete?.()
-        })
-        .catch((e) => rejectTermResult(name, e instanceof Error ? e.message : 'Something went wrong'))
+      try {
+        const term = await explainTerm(value.termName, value.context || undefined)
+        resolveTermResult(name, term)
+        onExplainComplete?.()
+      } catch (e) {
+        rejectTermResult(name, e instanceof Error ? e.message : 'Something went wrong')
+      }
     },
   })
 
@@ -144,10 +145,10 @@ export function TermForm({ defaultTerm, compact, onExplainComplete }: Props = {}
 
   if (compact) {
     return (
-      <div className="flex flex-col gap-4">
+      <>
         {singleModeForm}
         {datalist}
-      </div>
+      </>
     )
   }
 
