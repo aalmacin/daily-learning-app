@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useTransition } from 'react';
+import { useState, useEffect, useRef, useTransition, useCallback } from 'react';
 import { searchTerms } from '@/actions/terms';
 import { TermSearchResults } from '@/components/TermSearchResults';
 import type { Term } from '@/lib/db';
@@ -45,6 +45,15 @@ export function SearchBar() {
     setResults(null);
   }
 
+  const refreshSearch = useCallback(() => {
+    const trimmed = query.trim();
+    if (!trimmed) return;
+    startTransition(async () => {
+      const terms = await searchTerms(trimmed);
+      setResults(terms);
+    });
+  }, [query]);
+
   return (
     <div ref={containerRef} className="relative min-w-[120px] max-w-[280px] w-[30%]">
       <div className={`flex items-center gap-2 bg-zinc-100 dark:bg-zinc-800 border rounded-lg px-3 py-1.5 transition-colors ${overlayOpen ? 'border-zinc-400 dark:border-zinc-500' : 'border-zinc-200 dark:border-zinc-700'}`}>
@@ -87,7 +96,7 @@ export function SearchBar() {
             {isPending ? (
               <p className="text-sm text-zinc-500 dark:text-zinc-400">Searching…</p>
             ) : (
-              <TermSearchResults terms={results!} q={query} />
+              <TermSearchResults terms={results!} q={query} onTermExplained={refreshSearch} />
             )}
           </div>
         </div>
