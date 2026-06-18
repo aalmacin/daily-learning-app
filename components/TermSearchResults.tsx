@@ -234,7 +234,7 @@ export function TermSearchResults({ terms, q, onTermExplained }: Props) {
         <p className="text-sm text-zinc-500 dark:text-zinc-400">
           {terms.length} result{terms.length !== 1 ? 's' : ''} for &ldquo;{q}&rdquo;
         </p>
-        {!isExactMatch && !showAddForm && (
+        {!isExactMatch && !showAddForm && q.trim() && (
           <button
             type="button"
             onClick={() => setShowAddForm(true)}
