@@ -1,4 +1,4 @@
-import { Innertube } from 'youtubei.js';
+import { YoutubeTranscript } from 'youtube-transcript';
 
 const VIDEO_ID_RE = /^[a-zA-Z0-9_-]{11}$/;
 
@@ -41,25 +41,22 @@ export async function fetchVideoTitle(url: string): Promise<string> {
 }
 
 export async function fetchTranscript(videoId: string): Promise<string> {
-  const yt = await Innertube.create({ retrieve_player: false });
-  const info = await yt.getInfo(videoId);
-
-  let transcriptInfo: Awaited<ReturnType<typeof info.getTranscript>>;
+  // youtubei.js's get_transcript endpoint returns HTTP 400 against current YouTube;
+  // youtube-transcript fetches the caption track directly and is serverless-safe.
+  // Prefer English; fall back to the video's default track when English is absent.
+  let items: Awaited<ReturnType<typeof YoutubeTranscript.fetchTranscript>>;
   try {
-    transcriptInfo = await info.getTranscript();
+    items = await YoutubeTranscript.fetchTranscript(videoId, { lang: 'en' });
   } catch {
-    throw new Error('No transcript available for this video.');
+    try {
+      items = await YoutubeTranscript.fetchTranscript(videoId);
+    } catch {
+      throw new Error('No transcript available for this video.');
+    }
   }
 
-  // v17+: TranscriptInfo.transcript → Transcript → .content (TranscriptSearchPanel) → .body (TranscriptSegmentList) → .initial_segments
-  const segments = transcriptInfo?.transcript?.content?.body?.initial_segments;
-  if (!segments || segments.length === 0) {
-    throw new Error('No transcript available for this video.');
-  }
-
-  const text = segments
-    .map((s) => (typeof s.snippet.text === 'string' ? s.snippet.text : ''))
-    .filter(Boolean)
+  const text = items
+    .map((i) => i.text)
     .join(' ')
     .replace(/\s+/g, ' ')
     .trim();
