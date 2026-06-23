@@ -1,6 +1,6 @@
 'use server';
 
-import { getChatsByRefinementId, getRefinementById, getTermById, insertChatMessages, type ChatMessage } from '@/lib/db';
+import { getChatsByRefinementId, getRefinementById, getRefinementsByTermId, getTermById, insertChatMessages, type ChatMessage } from '@/lib/db';
 import { chatAboutTerm } from '@/lib/openai';
 
 export async function askQuestion(
@@ -28,4 +28,14 @@ export async function askQuestion(
   ]);
 
   return getChatsByRefinementId(refinementId);
+}
+
+export async function getLatestResearchChat(
+  termId: number,
+): Promise<{ refinementId: number; messages: ChatMessage[] } | null> {
+  const refinements = await getRefinementsByTermId(termId);
+  const latest = refinements[0];
+  if (!latest) return null;
+  const messages = await getChatsByRefinementId(latest.id);
+  return { refinementId: latest.id, messages };
 }

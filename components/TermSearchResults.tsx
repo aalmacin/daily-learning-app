@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import Link from 'next/link';
 import type { Term, ChatMessage } from '@/lib/db';
 import { createAttempt } from '@/actions/refinements';
-import { askQuestion } from '@/actions/chat';
+import { askQuestion, getLatestResearchChat } from '@/actions/chat';
 import { ResearchTabs } from './ResearchTabs';
 import { TermForm } from '@/components/TermForm';
 
@@ -34,9 +34,25 @@ function PriorityBadge({ priority }: { priority: Term['priority'] }) {
 
 function ResearchChat({ term }: { term: Term }) {
   const [chat, setChat] = useState<ChatState | null>(null);
+  const [loading, setLoading] = useState(true);
   const [input, setInput] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    let cancelled = false;
+    getLatestResearchChat(term.id).then((result) => {
+      if (cancelled) return;
+      setLoading(false);
+      if (result) {
+        // Only seed if the user hasn't started a chat yet during the load
+        setChat((prev) => prev ?? result);
+      }
+    }).catch(() => {
+      if (!cancelled) setLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [term.id]);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -61,6 +77,8 @@ function ResearchChat({ term }: { term: Term }) {
       }
     });
   }
+
+  const isDisabled = loading || isPending;
 
   return (
     <div>
@@ -87,13 +105,13 @@ function ResearchChat({ term }: { term: Term }) {
           aria-label={`Ask a question about ${term.name}`}
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder={`Ask about ${term.name}…`}
-          disabled={isPending}
+          placeholder={loading ? 'Loading…' : `Ask about ${term.name}…`}
+          disabled={isDisabled}
           className="flex-1 px-2.5 py-1.5 text-xs border border-zinc-200 dark:border-zinc-700 rounded-md bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:focus:ring-zinc-600 disabled:opacity-50"
         />
         <button
           type="submit"
-          disabled={!input.trim() || isPending}
+          disabled={!input.trim() || isDisabled}
           className="px-3 py-1.5 text-xs font-medium rounded-md bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 hover:bg-zinc-700 dark:hover:bg-zinc-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
           {isPending ? '…' : 'Ask'}
