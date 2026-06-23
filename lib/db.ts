@@ -626,6 +626,42 @@ export async function insertChatMessages(
   return data as ChatMessage[];
 }
 
+export type TermCitation = {
+  id: number;
+  term_id: number;
+  url: string;
+  title: string;
+  snippet: string;
+  created_at: string;
+};
+
+export async function getCitationsByTermId(termId: number): Promise<TermCitation[]> {
+  const { data, error } = await getSupabase()
+    .from('term_citations')
+    .select('*')
+    .eq('term_id', termId)
+    .order('id', { ascending: true });
+  if (error) throw error;
+  return data as TermCitation[];
+}
+
+export async function insertTermCitations(
+  termId: number,
+  citations: Array<{ url: string; title: string; snippet: string }>,
+): Promise<void> {
+  if (citations.length === 0) return;
+  const rows = citations.map((c) => ({
+    term_id: termId,
+    url: c.url,
+    title: c.title,
+    snippet: c.snippet,
+  }));
+  const { error } = await getSupabase()
+    .from('term_citations')
+    .upsert(rows as unknown as never, { onConflict: 'term_id,url', ignoreDuplicates: true });
+  if (error) throw error;
+}
+
 export async function getUserSettings(userId: string): Promise<UserSettings | null> {
   const { data, error } = await getSupabase()
     .from('user_settings')
