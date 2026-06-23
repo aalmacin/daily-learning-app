@@ -1176,6 +1176,109 @@ export async function reviewFlashcard(id: number, userId: string, correct: boole
   return data as Flashcard;
 }
 
+export type VideoResearchStatus = 'processing' | 'ready' | 'error';
+
+export type VideoKeyConcept = { concept: string; definition: string };
+
+export type VideoResearch = {
+  id: number;
+  user_id: string;
+  term_id: number;
+  youtube_url: string;
+  video_id: string;
+  title: string;
+  status: VideoResearchStatus;
+  error: string | null;
+  raw_transcript: string | null;
+  ai_transcript: string | null;
+  summary: string | null;
+  key_takeaways: string[];
+  key_concepts: VideoKeyConcept[];
+  created_at: string;
+  updated_at: string;
+};
+
+type VideoResearchRow = Omit<VideoResearch, 'key_takeaways' | 'key_concepts'> & {
+  key_takeaways: unknown;
+  key_concepts: unknown;
+};
+
+function mapVideoResearchRow(row: VideoResearchRow): VideoResearch {
+  return {
+    ...row,
+    key_takeaways: Array.isArray(row.key_takeaways) ? (row.key_takeaways as string[]) : [],
+    key_concepts: Array.isArray(row.key_concepts) ? (row.key_concepts as VideoKeyConcept[]) : [],
+  };
+}
+
+export async function getVideoResearchByTerm(termId: number, userId: string): Promise<VideoResearch[]> {
+  const { data, error } = await getSupabase()
+    .from('video_research')
+    .select('*')
+    .eq('term_id', termId)
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data as VideoResearchRow[]).map(mapVideoResearchRow);
+}
+
+export async function getVideoResearchById(id: number, userId: string): Promise<VideoResearch | null> {
+  const { data, error } = await getSupabase()
+    .from('video_research')
+    .select('*')
+    .eq('id', id)
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (error) throw error;
+  return data ? mapVideoResearchRow(data as VideoResearchRow) : null;
+}
+
+export async function insertVideoResearch(input: {
+  termId: number;
+  userId: string;
+  youtubeUrl: string;
+  videoId: string;
+  title: string;
+}): Promise<VideoResearch> {
+  const { data, error } = await getSupabase()
+    .from('video_research')
+    .insert({
+      term_id: input.termId,
+      user_id: input.userId,
+      youtube_url: input.youtubeUrl,
+      video_id: input.videoId,
+      title: input.title,
+      status: 'processing',
+    } as unknown as never)
+    .select()
+    .single();
+  if (error) throw error;
+  return mapVideoResearchRow(data as VideoResearchRow);
+}
+
+export async function updateVideoResearch(
+  id: number,
+  updates: Partial<Pick<VideoResearch, 'title' | 'status' | 'error' | 'raw_transcript' | 'ai_transcript' | 'summary' | 'key_takeaways' | 'key_concepts'>>,
+): Promise<VideoResearch> {
+  const { data, error } = await getSupabase()
+    .from('video_research')
+    .update({ ...updates, updated_at: new Date().toISOString() } as unknown as never)
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return mapVideoResearchRow(data as VideoResearchRow);
+}
+
+export async function deleteVideoResearch(id: number, userId: string): Promise<void> {
+  const { error } = await getSupabase()
+    .from('video_research')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', userId);
+  if (error) throw error;
+}
+
 export async function getTermsByCategory(userId: string, categoryId: number): Promise<CategoryTerm[]> {
   const { data: cat, error: catError } = await getSupabase()
     .from('categories')

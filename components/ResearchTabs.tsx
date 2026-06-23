@@ -2,6 +2,7 @@
 
 import { useState, type ReactNode } from 'react';
 import { NoteEditor } from './NoteEditor';
+import { VideoResearchPanel } from './VideoResearchPanel';
 
 type Accent = 'zinc' | 'cyan';
 
@@ -25,8 +26,15 @@ const ICON_NOTE = (
   </svg>
 );
 
+const ICON_VIDEO = (
+  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <polygon points="23 7 16 12 23 17 23 7" />
+    <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+  </svg>
+);
+
 export function ResearchTabs({ termId, initialMarkdown, chat, accent = 'zinc' }: Props) {
-  const [tab, setTab] = useState<'ask' | 'notes'>('ask');
+  const [tab, setTab] = useState<'ask' | 'notes' | 'video'>('ask');
 
   const activeClass =
     accent === 'cyan'
@@ -47,11 +55,17 @@ export function ResearchTabs({ termId, initialMarkdown, chat, accent = 'zinc' }:
         <button type="button" className={tabClass(tab === 'notes')} onClick={() => setTab('notes')}>
           {ICON_NOTE} My Notes
         </button>
+        <button type="button" className={tabClass(tab === 'video')} onClick={() => setTab('video')}>
+          {ICON_VIDEO} Video Research
+        </button>
       </div>
       <div className="pt-3">
         <div className={tab === 'ask' ? '' : 'hidden'}>{chat}</div>
         <div className={tab === 'notes' ? '' : 'hidden'}>
           <NoteEditor termId={termId} initialMarkdown={initialMarkdown} />
+        </div>
+        <div className={tab === 'video' ? '' : 'hidden'}>
+          <VideoResearchPanel termId={termId} accent={accent} />
         </div>
       </div>
     </div>

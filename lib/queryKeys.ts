@@ -9,4 +9,7 @@ export const queryKeys = {
   termList: {
     all: () => ['termList'] as const,
   },
+  videoResearch: {
+    all: (termId: number) => ['videoResearch', termId] as const,
+  },
 }
