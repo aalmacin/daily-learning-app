@@ -183,3 +183,116 @@ export async function explainTermWithAI(term: string, allowedCategories: string[
     categories: specificCategories.length > 0 ? specificCategories : ['Uncategorized'],
   };
 }
+
+const VIDEO_MODEL = 'gpt-5.4-mini';
+
+export async function summarizeVideo(transcript: string): Promise<string> {
+  const response = await client.chat.completions.create({
+    model: VIDEO_MODEL,
+    messages: [
+      {
+        role: 'system',
+        content:
+          'You summarize technical video transcripts for learning. Write a concise TLDR (2-4 sentences, plain prose, no markdown) capturing the core idea. Respond with the summary text only.',
+      },
+      { role: 'user', content: transcript },
+    ],
+  });
+  const content = response.choices[0]?.message?.content;
+  if (!content) throw new Error('Empty response from OpenAI');
+  return content.trim();
+}
+
+export async function extractVideoKeyTakeaways(transcript: string): Promise<string[]> {
+  const response = await client.chat.completions.create({
+    model: VIDEO_MODEL,
+    messages: [
+      {
+        role: 'system',
+        content:
+          'You extract key takeaways from a technical video transcript. Respond ONLY with a JSON object of the form {"takeaways": string[]}. Each takeaway is one concise sentence. 3-7 items, most important first. No markdown.',
+      },
+      { role: 'user', content: transcript },
+    ],
+    response_format: { type: 'json_object' },
+  });
+  const raw = response.choices[0]?.message?.content;
+  if (!raw) throw new Error('Empty response from OpenAI');
+  const parsed = JSON.parse(raw) as { takeaways?: unknown };
+  if (!Array.isArray(parsed.takeaways) || !parsed.takeaways.every((t) => typeof t === 'string')) {
+    throw new Error('Invalid response shape from OpenAI');
+  }
+  return parsed.takeaways as string[];
+}
+
+export async function extractVideoKeyConcepts(
+  transcript: string,
+): Promise<{ concept: string; definition: string }[]> {
+  const response = await client.chat.completions.create({
+    model: VIDEO_MODEL,
+    messages: [
+      {
+        role: 'system',
+        content:
+          'You mine key concepts from a technical video transcript that are worth researching individually. Respond ONLY with a JSON object of the form {"concepts": {"concept": string, "definition": string}[]}. Definition is concise and from your own knowledge. Sort by importance to the video, most important first. No markdown.',
+      },
+      { role: 'user', content: transcript },
+    ],
+    response_format: { type: 'json_object' },
+  });
+  const raw = response.choices[0]?.message?.content;
+  if (!raw) throw new Error('Empty response from OpenAI');
+  const parsed = JSON.parse(raw) as { concepts?: unknown };
+  if (
+    !Array.isArray(parsed.concepts) ||
+    !parsed.concepts.every(
+      (c) =>
+        c && typeof c === 'object' &&
+        typeof (c as Record<string, unknown>).concept === 'string' &&
+        typeof (c as Record<string, unknown>).definition === 'string',
+    )
+  ) {
+    throw new Error('Invalid response shape from OpenAI');
+  }
+  return parsed.concepts as { concept: string; definition: string }[];
+}
+
+// Split on whitespace into chunks of ~12k characters at word boundaries so a long
+// transcript does not exceed the model's output-token limit when reformatting.
+function chunkText(text: string, maxChars = 12000): string[] {
+  if (text.length <= maxChars) return [text];
+  const words = text.split(' ');
+  const chunks: string[] = [];
+  let current = '';
+  for (const word of words) {
+    if (current.length + word.length + 1 > maxChars && current.length > 0) {
+      chunks.push(current);
+      current = '';
+    }
+    current = current ? `${current} ${word}` : word;
+  }
+  if (current) chunks.push(current);
+  return chunks;
+}
+
+export async function formatVideoTranscript(rawTranscript: string): Promise<string> {
+  const chunks = chunkText(rawTranscript);
+  const formatted: string[] = [];
+  for (const chunk of chunks) {
+    const response = await client.chat.completions.create({
+      model: VIDEO_MODEL,
+      messages: [
+        {
+          role: 'system',
+          content:
+            'You clean up a raw video transcript chunk. Keep the same spoken words in the same order. Fix mis-transcribed technical terms, add proper punctuation and capitalization, and break into natural paragraphs. Do NOT summarize, add headings, or rewrite into an article — it must stay a transcript. Respond with the corrected transcript text only.',
+        },
+        { role: 'user', content: chunk },
+      ],
+    });
+    const content = response.choices[0]?.message?.content;
+    if (!content) throw new Error('Empty response from OpenAI');
+    formatted.push(content.trim());
+  }
+  return formatted.join('\n\n');
+}
