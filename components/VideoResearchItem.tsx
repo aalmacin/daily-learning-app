@@ -26,8 +26,8 @@ function ConceptsTable({ concepts }: { concepts: VideoResearch['key_concepts'] }
   return (
     <table className="w-full border-collapse text-xs">
       <tbody>
-        {concepts.map((c, i) => (
-          <tr key={i}>
+        {concepts.map((c) => (
+          <tr key={c.concept}>
             <td className="border border-zinc-200 dark:border-zinc-700 px-2.5 py-1.5 font-semibold align-top w-1/3 text-zinc-900 dark:text-zinc-50">{c.concept}</td>
             <td className="border border-zinc-200 dark:border-zinc-700 px-2.5 py-1.5 align-top text-zinc-700 dark:text-zinc-300">{c.definition}</td>
           </tr>
@@ -41,7 +41,7 @@ function Takeaways({ items }: { items: string[] }) {
   if (items.length === 0) return <p className="text-xs text-zinc-400 dark:text-zinc-500">No takeaways.</p>;
   return (
     <ul className="list-disc pl-5 text-sm leading-6 text-zinc-700 dark:text-zinc-300 space-y-1">
-      {items.map((t, i) => <li key={i}>{t}</li>)}
+      {items.map((t) => <li key={t}>{t}</li>)}
     </ul>
   );
 }
