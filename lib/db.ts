@@ -1222,11 +1222,12 @@ export async function getVideoResearchByTerm(termId: number, userId: string): Pr
   return (data as VideoResearchRow[]).map(mapVideoResearchRow);
 }
 
-export async function getVideoResearchById(id: number): Promise<VideoResearch | null> {
+export async function getVideoResearchById(id: number, userId: string): Promise<VideoResearch | null> {
   const { data, error } = await getSupabase()
     .from('video_research')
     .select('*')
     .eq('id', id)
+    .eq('user_id', userId)
     .maybeSingle();
   if (error) throw error;
   return data ? mapVideoResearchRow(data as VideoResearchRow) : null;

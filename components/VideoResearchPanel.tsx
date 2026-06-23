@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/queryKeys';
 import { listVideoResearch, submitVideoResearch } from '@/actions/videoResearch';
+import { isVideoResearchStale } from '@/lib/videoResearch';
 import { VideoResearchItem } from './VideoResearchItem';
 
 type Accent = 'zinc' | 'cyan';
@@ -23,7 +24,7 @@ export function VideoResearchPanel({ termId, accent = 'zinc' }: Props) {
     queryKey: queryKeys.videoResearch.all(termId),
     queryFn: () => listVideoResearch(termId),
     refetchInterval: (query) =>
-      (query.state.data ?? []).some((v) => v.status === 'processing') ? 3000 : false,
+      (query.state.data ?? []).some((v) => v.status === 'processing' && !isVideoResearchStale(v)) ? 3000 : false,
   });
 
   const invalidate = () =>

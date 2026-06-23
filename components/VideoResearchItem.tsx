@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import type { VideoResearch } from '@/lib/db';
 import { updateVideoResearchTitle, removeVideoResearch, retryVideoResearch } from '@/actions/videoResearch';
+import { isVideoResearchStale } from '@/lib/videoResearch';
 
 type Accent = 'zinc' | 'cyan';
 type Tab = 'summary' | 'study' | 'ai' | 'concepts' | 'raw';
@@ -26,8 +27,8 @@ function ConceptsTable({ concepts }: { concepts: VideoResearch['key_concepts'] }
   return (
     <table className="w-full border-collapse text-xs">
       <tbody>
-        {concepts.map((c) => (
-          <tr key={c.concept}>
+        {concepts.map((c, i) => (
+          <tr key={`${i}-${c.concept}`}>
             <td className="border border-zinc-200 dark:border-zinc-700 px-2.5 py-1.5 font-semibold align-top w-1/3 text-zinc-900 dark:text-zinc-50">{c.concept}</td>
             <td className="border border-zinc-200 dark:border-zinc-700 px-2.5 py-1.5 align-top text-zinc-700 dark:text-zinc-300">{c.definition}</td>
           </tr>
@@ -41,7 +42,7 @@ function Takeaways({ items }: { items: string[] }) {
   if (items.length === 0) return <p className="text-xs text-zinc-400 dark:text-zinc-500">No takeaways.</p>;
   return (
     <ul className="list-disc pl-5 text-sm leading-6 text-zinc-700 dark:text-zinc-300 space-y-1">
-      {items.map((t) => <li key={t}>{t}</li>)}
+      {items.map((t, i) => <li key={`${i}-${t}`}>{t}</li>)}
     </ul>
   );
 }
@@ -118,9 +119,14 @@ export function VideoResearchItem({ item, accent = 'zinc', onChanged }: Props) {
         )}
 
         {item.status === 'processing' && (
-          <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-300 flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 border-2 border-current border-t-transparent rounded-full animate-spin" /> Processing
-          </span>
+          <>
+            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-300 flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 border-2 border-current border-t-transparent rounded-full animate-spin" /> Processing
+            </span>
+            {isVideoResearchStale(item) && (
+              <button type="button" onClick={handleRetry} disabled={isPending} className="text-[11px] font-semibold text-yellow-700 dark:text-yellow-300 underline disabled:opacity-40">Retry</button>
+            )}
+          </>
         )}
         {item.status === 'ready' && (
           <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300">Ready</span>
@@ -159,7 +165,11 @@ export function VideoResearchItem({ item, accent = 'zinc', onChanged }: Props) {
           </div>
 
           {item.status === 'processing' ? (
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">Generating study material…</p>
+            isVideoResearchStale(item) ? (
+              <p className="text-sm text-zinc-500 dark:text-zinc-400">This is taking longer than expected — it may have been interrupted. Use Retry to restart.</p>
+            ) : (
+              <p className="text-sm text-zinc-500 dark:text-zinc-400">Generating study material…</p>
+            )
           ) : item.status === 'ready' ? (
             <>
               <div className="flex gap-1 border-b border-zinc-200 dark:border-zinc-700 px-1 flex-wrap">

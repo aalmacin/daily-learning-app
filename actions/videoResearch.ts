@@ -75,7 +75,7 @@ export async function submitVideoResearch(termId: number, url: string): Promise<
 export async function updateVideoResearchTitle(id: number, title: string): Promise<VideoResearch> {
   const user = await getCurrentUser();
   if (!user) throw new Error('Not authenticated');
-  const existing = await getVideoResearchById(id);
+  const existing = await getVideoResearchById(id, user.id);
   if (!existing || existing.user_id !== user.id) throw new Error('Not found');
   const trimmed = title.trim();
   if (!trimmed) throw new Error('Title cannot be empty.');
@@ -91,7 +91,7 @@ export async function removeVideoResearch(id: number): Promise<void> {
 export async function retryVideoResearch(id: number): Promise<VideoResearch> {
   const user = await getCurrentUser();
   if (!user) throw new Error('Not authenticated');
-  const existing = await getVideoResearchById(id);
+  const existing = await getVideoResearchById(id, user.id);
   if (!existing || existing.user_id !== user.id) throw new Error('Not found');
   const row = await updateVideoResearch(id, { status: 'processing', error: null });
   after(() => processVideoResearch(row.id, row.video_id));
