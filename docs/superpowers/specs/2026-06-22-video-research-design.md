@@ -22,7 +22,7 @@ to run inside this app with **OpenAI** instead of Claude, and made **serverless-
 ## Decisions (confirmed)
 
 - **Placement:** third tab in `ResearchTabs` ("Video Research"). Videos tied to `term_id`.
-- **Transcript source:** pure-JS library (`youtubei.js`) over HTTP — works on Vercel/serverless. No binary.
+- **Transcript source:** pure-JS library over HTTP — works on Vercel/serverless. No binary. *(Implementation note: `youtubei.js`'s `get_transcript` endpoint returns HTTP 400 against current YouTube for all videos, so the implementation uses [`youtube-transcript`](https://www.npmjs.com/package/youtube-transcript) instead — it fetches the caption track directly, prefers the English track with a fallback to the default, and is likewise serverless-safe. Verified end-to-end against multiple live videos.)*
 - **Title source:** YouTube oEmbed endpoint (simple HTTP GET).
 - **Runtime target:** deployed (Vercel/serverless). No spawned binaries anywhere.
 - **Submit UX:** row appears immediately as `Processing`; AI fills it in via Next.js `after()`. List polls while any row is processing.
