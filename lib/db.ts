@@ -1279,6 +1279,64 @@ export async function deleteVideoResearch(id: number, userId: string): Promise<v
   if (error) throw error;
 }
 
+export type VocabularyWord = {
+  id: number;
+  user_id: string;
+  word: string;
+  type: 'word' | 'idiom';
+  definition: string;
+  context: string;
+  connections: string;
+  morphology: string;
+  flashcard_sentence: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export async function getVocabularyWords(userId: string, type?: 'word' | 'idiom'): Promise<VocabularyWord[]> {
+  let query = getSupabase()
+    .from('vocabulary_words')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+  if (type) query = query.eq('type', type);
+  const { data, error } = await query;
+  if (error) throw error;
+  return data as VocabularyWord[];
+}
+
+export async function getVocabularyWordById(id: number, userId: string): Promise<VocabularyWord | null> {
+  const { data, error } = await getSupabase()
+    .from('vocabulary_words')
+    .select('*')
+    .eq('id', id)
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (error) throw error;
+  return data as VocabularyWord | null;
+}
+
+export async function insertVocabularyWord(
+  input: Omit<VocabularyWord, 'id' | 'created_at' | 'updated_at'>,
+): Promise<VocabularyWord> {
+  const { data, error } = await getSupabase()
+    .from('vocabulary_words')
+    .insert(input as unknown as never)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as VocabularyWord;
+}
+
+export async function deleteVocabularyWord(id: number, userId: string): Promise<void> {
+  const { error } = await getSupabase()
+    .from('vocabulary_words')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', userId);
+  if (error) throw error;
+}
+
 export async function getTermsByCategory(userId: string, categoryId: number): Promise<CategoryTerm[]> {
   const { data: cat, error: catError } = await getSupabase()
     .from('categories')

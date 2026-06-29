@@ -184,6 +184,57 @@ export async function explainTermWithAI(term: string, allowedCategories: string[
   };
 }
 
+export type VocabularyAnalysis = {
+  definition: string;
+  context: string;
+  connections: string;
+  morphology: string;
+  flashcard_sentence: string;
+};
+
+function buildVocabularyPrompt(type: 'word' | 'idiom'): string {
+  const typeLabel = type === 'word' ? 'word' : 'idiom/phrase';
+  return `You are a vocabulary learning assistant. Given a ${typeLabel}, respond with a JSON object with exactly these fields:
+
+- "definition": What the ${typeLabel} means AND what it does NOT mean (common misconceptions). 2-3 sentences.
+- "context": A natural example sentence using the ${typeLabel} in context. Make it vivid and memorable.
+- "connections": Connect the ${typeLabel} to a well-known person, event, character, or cultural reference to aid memory. For example, "Alfred the butler in Batman is a factotum — he does everything for Bruce Wayne." 1-2 sentences.
+- "morphology": The structural analysis — Latin or Greek roots, prefixes, suffixes, morphemes, etymology. Explain how the parts build the meaning. 1-3 sentences.
+- "flashcard_sentence": A sentence using the ${typeLabel} where the ${typeLabel} itself is replaced with a blank marker __blank__. The sentence should be different from the context sentence. It should provide enough clues for someone to guess the ${typeLabel}.
+
+Respond ONLY with valid JSON, no markdown or extra text.`;
+}
+
+export async function analyzeVocabulary(
+  word: string,
+  type: 'word' | 'idiom',
+): Promise<VocabularyAnalysis> {
+  const response = await client.chat.completions.create({
+    model: 'gpt-5.4-mini',
+    messages: [
+      { role: 'system', content: buildVocabularyPrompt(type) },
+      { role: 'user', content: word },
+    ],
+    response_format: { type: 'json_object' },
+  });
+
+  const raw = response.choices[0]?.message?.content;
+  if (!raw) throw new Error('Empty response from OpenAI');
+
+  const parsed = JSON.parse(raw) as Partial<VocabularyAnalysis>;
+  if (
+    typeof parsed.definition !== 'string' ||
+    typeof parsed.context !== 'string' ||
+    typeof parsed.connections !== 'string' ||
+    typeof parsed.morphology !== 'string' ||
+    typeof parsed.flashcard_sentence !== 'string'
+  ) {
+    throw new Error('Invalid response shape from OpenAI');
+  }
+
+  return parsed as VocabularyAnalysis;
+}
+
 const VIDEO_MODEL = 'gpt-5.4-mini';
 
 export async function summarizeVideo(transcript: string): Promise<string> {
