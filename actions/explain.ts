@@ -51,7 +51,10 @@ export async function explainTerm(rawName: string, context?: string): Promise<Ex
   } catch (err) {
     if (isDuplicateKeyError(err)) {
       const existing = await getTerm(name, user.id);
-      if (existing) return { ...existing, alreadyExisted: true };
+      if (existing) {
+        await insertTermCitations(existing.id, explanation.citations);
+        return { ...existing, alreadyExisted: true };
+      }
     }
     throw err;
   }
