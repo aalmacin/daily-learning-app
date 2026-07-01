@@ -1,6 +1,6 @@
 'use server';
 
-import { deleteTerm as dbDeleteTerm, getAllCategories, getAllTerms, getTermById, getTermsPaginated, getUserSettings, updateTerm } from '@/lib/db';
+import { deleteTerm as dbDeleteTerm, getAllCategories, getAllTerms, getTermById, getTermsPaginated, getUserSettings, insertTermCitations, updateTerm } from '@/lib/db';
 import { explainTermWithAI } from '@/lib/openai';
 import { getCurrentUser } from '@/lib/auth';
 import { archiveNotionPage, unarchiveNotionPage, updateNotionPageContent, updateNotionPageMetadata } from '@/lib/notion';
@@ -83,6 +83,8 @@ export async function regenerateTerm(id: number, name: string, context?: string)
   }, user.id);
 
   if (!updated) throw new Error('Term not found');
+
+  await insertTermCitations(updated.id, explanation.citations);
 
   if (updated.notion_page_id && credentials) {
     await Promise.all([

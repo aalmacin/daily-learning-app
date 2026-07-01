@@ -1,6 +1,6 @@
 'use server';
 
-import { getTerm, insertTerm, updateTerm, deleteTerm, getAllCategories, getUserSettings } from '@/lib/db';
+import { getTerm, insertTerm, updateTerm, deleteTerm, getAllCategories, getUserSettings, insertTermCitations } from '@/lib/db';
 import { explainTermWithAI } from '@/lib/openai';
 import { getCurrentUser } from '@/lib/auth';
 import { createNotionPage, archiveNotionPage } from '@/lib/notion';
@@ -55,6 +55,7 @@ export async function explainTerm(rawName: string, context?: string): Promise<Ex
     }
     throw err;
   }
+  await insertTermCitations(term.id, explanation.citations);
   const settings = await getUserSettings(user.id);
   if (settings?.notion_api_key && settings?.notion_database_id) {
     const credentials = { apiKey: settings.notion_api_key, databaseId: settings.notion_database_id };

@@ -1,6 +1,6 @@
 'use server';
 
-import { getChatsByRefinementId, getRefinementById, getRefinementsByTermId, getTermById, insertChatMessages, type ChatMessage } from '@/lib/db';
+import { getChatsByRefinementId, getRefinementById, getRefinementsByTermId, getTermById, insertChatMessages, insertTermCitations, type ChatMessage } from '@/lib/db';
 import { chatAboutTerm } from '@/lib/openai';
 
 export async function askQuestion(
@@ -15,7 +15,7 @@ export async function askQuestion(
 
   const history = await getChatsByRefinementId(refinementId);
 
-  const answer = await chatAboutTerm(
+  const { answer, citations } = await chatAboutTerm(
     term.name,
     term.content,
     history.map(({ role, content }) => ({ role, content })),
@@ -26,6 +26,8 @@ export async function askQuestion(
     { refinement_id: refinementId, role: 'user', content: question },
     { refinement_id: refinementId, role: 'assistant', content: answer },
   ]);
+
+  await insertTermCitations(term.id, citations);
 
   return getChatsByRefinementId(refinementId);
 }
