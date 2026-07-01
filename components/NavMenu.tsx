@@ -8,6 +8,7 @@ const NAV_LINKS = [
   { href: '/terms', label: 'Terms' },
   { href: '/term-list', label: 'Term List' },
   { href: '/flashcards', label: 'Flashcards' },
+  { href: '/vocabulary', label: 'Vocabulary' },
   { href: '/categories', label: 'Categories' },
   { href: '/settings', label: 'Settings' },
 ] as const;
