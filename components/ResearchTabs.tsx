@@ -2,6 +2,7 @@
 
 import { useState, type ReactNode } from 'react';
 import { NoteEditor } from './NoteEditor';
+import { VideoResearchPanel } from './VideoResearchPanel';
 import { CitationsList } from './CitationsList';
 
 type Accent = 'zinc' | 'cyan';
@@ -26,6 +27,13 @@ const ICON_NOTE = (
   </svg>
 );
 
+const ICON_VIDEO = (
+  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <polygon points="23 7 16 12 23 17 23 7" />
+    <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+  </svg>
+);
+
 const ICON_CITATION = (
   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
@@ -33,7 +41,7 @@ const ICON_CITATION = (
   </svg>
 );
 
-type Tab = 'ask' | 'notes' | 'citations';
+type Tab = 'ask' | 'notes' | 'video' | 'citations';
 
 export function ResearchTabs({ termId, initialMarkdown, chat, accent = 'zinc' }: Props) {
   const [tab, setTab] = useState<Tab>('ask');
@@ -57,6 +65,9 @@ export function ResearchTabs({ termId, initialMarkdown, chat, accent = 'zinc' }:
         <button type="button" className={tabClass(tab === 'notes')} onClick={() => setTab('notes')}>
           {ICON_NOTE} My Notes
         </button>
+        <button type="button" className={tabClass(tab === 'video')} onClick={() => setTab('video')}>
+          {ICON_VIDEO} Video Research
+        </button>
         <button type="button" className={tabClass(tab === 'citations')} onClick={() => setTab('citations')}>
           {ICON_CITATION} Citations
         </button>
@@ -65,6 +76,9 @@ export function ResearchTabs({ termId, initialMarkdown, chat, accent = 'zinc' }:
         <div className={tab === 'ask' ? '' : 'hidden'}>{chat}</div>
         <div className={tab === 'notes' ? '' : 'hidden'}>
           <NoteEditor termId={termId} initialMarkdown={initialMarkdown} />
+        </div>
+        <div className={tab === 'video' ? '' : 'hidden'}>
+          <VideoResearchPanel termId={termId} accent={accent} />
         </div>
         {tab === 'citations' && <CitationsList termId={termId} />}
       </div>
