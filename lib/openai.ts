@@ -10,6 +10,10 @@ const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export type Citation = { url: string; title: string; snippet: string };
 
+// Keep only the most relevant sources per response: cited-in-answer annotations
+// rank ahead of consulted-only search sources (insertion order below reflects this).
+const MAX_CITATIONS_PER_RESPONSE = 5;
+
 // TEMP DEBUG (remove after diagnosis): reveals whether a web search actually ran
 // and what annotations the model attached.
 function logWebSearchDebug(label: string, response: OpenAI.Responses.Response) {
@@ -63,7 +67,7 @@ function extractCitations(response: OpenAI.Responses.Response): Citation[] {
       if (!byUrl.has(action.url)) byUrl.set(action.url, { url: action.url, title: '', snippet: '' });
     }
   }
-  return [...byUrl.values()];
+  return [...byUrl.values()].slice(0, MAX_CITATIONS_PER_RESPONSE);
 }
 
 function buildSystemPrompt(categories: string[]): string {
