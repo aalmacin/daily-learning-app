@@ -1,16 +1,30 @@
 /* DailyLearning — Service Worker
  * Strategy:
  *   - Precache app shell on install
- *   - Network-first for navigations (fall back to cached shell offline)
- *   - Cache-first for static assets (icons, css, js, fonts)
- *   - Stale-while-revalidate for API/JSON
- * Bump CACHE_VERSION on every deploy that changes the precache list.
+ *   - Network-first for navigations: no caching, just network with a
+ *     cached-shell / offline.html fallback if the network fails
+ *   - Cache-first for static assets (icons, css, js, fonts), capped at
+ *     MAX_STATIC_ENTRIES with FIFO eviction so content-hashed /_next/static
+ *     assets from old deploys don't accumulate forever
+ *   - Stale-while-revalidate for API/JSON, capped at MAX_RUNTIME_ENTRIES
+ *     with the same FIFO eviction
+ *   - The default catch-all (anything that isn't a navigation, api/json, or
+ *     style/script/image/font asset — e.g. Next.js RSC/prefetch payloads)
+ *     is never cached; it's a plain passthrough fetch
+ *
+ * Because both bounded caches now self-trim, routine deploys do NOT need a
+ * CACHE_VERSION bump for storage-size reasons. Only bump CACHE_VERSION when
+ * APP_SHELL itself changes, or to force a one-time cleanup of caches from
+ * clients still holding pre-fix, unbounded caches.
  */
 
-const CACHE_VERSION = 'v1.0.0';
+const CACHE_VERSION = 'v1.0.1';
 const SHELL_CACHE   = `shell-${CACHE_VERSION}`;
 const STATIC_CACHE  = `static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `runtime-${CACHE_VERSION}`;
+
+const MAX_STATIC_ENTRIES  = 120;
+const MAX_RUNTIME_ENTRIES = 60;
 
 const APP_SHELL = [
   '/',
@@ -57,27 +71,25 @@ self.addEventListener('fetch', (event) => {
 
   // API / JSON -> stale-while-revalidate
   if (url.pathname.startsWith('/api/') || (request.destination === '' && request.headers.get('accept')?.includes('application/json'))) {
-    event.respondWith(staleWhileRevalidate(request, RUNTIME_CACHE));
+    event.respondWith(staleWhileRevalidate(event, request, RUNTIME_CACHE));
     return;
   }
 
   // Static assets -> cache-first
   if (['style', 'script', 'image', 'font'].includes(request.destination)) {
-    event.respondWith(cacheFirst(request, STATIC_CACHE));
+    event.respondWith(cacheFirst(event, request, STATIC_CACHE));
     return;
   }
 
-  // Default: try network, fall back to cache
-  event.respondWith(networkFirst(request));
+  // Default: everything else (e.g. Next.js RSC/prefetch payloads) -> plain
+  // network passthrough, no caching
+  event.respondWith(fetch(request));
 });
 
 // ---- Strategies -------------------------------------------------------------
 async function networkFirst(request) {
   try {
-    const fresh = await fetch(request);
-    const cache = await caches.open(SHELL_CACHE);
-    cache.put(request, fresh.clone());
-    return fresh;
+    return await fetch(request);
   } catch (_) {
     const cached = await caches.match(request);
     if (cached) return cached;
@@ -86,23 +98,34 @@ async function networkFirst(request) {
   }
 }
 
-async function cacheFirst(request, cacheName) {
+async function cacheFirst(event, request, cacheName) {
   const cached = await caches.match(request);
   if (cached) return cached;
   const fresh = await fetch(request);
-  const cache = await caches.open(cacheName);
-  cache.put(request, fresh.clone());
+  if (fresh.ok) {
+    const cache = await caches.open(cacheName);
+    event.waitUntil(cache.put(request, fresh.clone()).then(() => trimCache(cache, MAX_STATIC_ENTRIES)));
+  }
   return fresh;
 }
 
-async function staleWhileRevalidate(request, cacheName) {
+async function staleWhileRevalidate(event, request, cacheName) {
   const cache = await caches.open(cacheName);
   const cached = await cache.match(request);
   const fetching = fetch(request).then((res) => {
-    cache.put(request, res.clone());
+    if (res.ok) {
+      event.waitUntil(cache.put(request, res.clone()).then(() => trimCache(cache, MAX_RUNTIME_ENTRIES)));
+    }
     return res;
   }).catch(() => cached);
   return cached || fetching;
+}
+
+async function trimCache(cache, maxEntries) {
+  const keys = await cache.keys();
+  if (keys.length > maxEntries) {
+    await Promise.all(keys.slice(0, keys.length - maxEntries).map((k) => cache.delete(k)));
+  }
 }
 
 // ---- Handle "skip waiting" message from the page ----------------------------
