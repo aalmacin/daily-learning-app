@@ -13,7 +13,8 @@ export function CitationsList({ termId }: { termId: number }) {
       .then((data) => {
         if (!cancelled) setCitations(data);
       })
-      .catch(() => {
+      .catch((err) => {
+        console.error('Failed to load citations', err);
         if (!cancelled) setCitations([]);
       });
     return () => {
@@ -42,7 +43,7 @@ export function CitationsList({ termId }: { termId: number }) {
             {c.title || c.url}
           </a>
           {c.snippet && (
-            <p className="mt-0.5 text-zinc-500 dark:text-zinc-400 leading-relaxed">{c.snippet}</p>
+            <p className="mt-0.5 text-zinc-500 dark:text-zinc-400 leading-relaxed line-clamp-3">{c.snippet}</p>
           )}
         </li>
       ))}

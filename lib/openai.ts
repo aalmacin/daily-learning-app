@@ -32,7 +32,9 @@ function buildSystemPrompt(categories: string[]): string {
 - "name": the properly cased term name as it is conventionally written (string, e.g. "DKIM", "TCP/IP", "GraphQL", "OAuth 2.0")
 - "content": a clear, concise explanation suitable for a technical notes database (string, 2-4 sentences)
 - "categories": an array of categories chosen ONLY from this exact list (use the exact casing shown): ${categories.join(', ')}. Use "Uncategorized" ONLY if none of the other categories apply — never combine it with other categories.
+
 Use web search to verify facts and to capture concepts that may be newer than your training knowledge whenever you are uncertain.
+
 Respond ONLY with valid JSON, no markdown or extra text.`;
 }
 
