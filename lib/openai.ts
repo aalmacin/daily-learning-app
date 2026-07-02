@@ -10,8 +10,33 @@ const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export type Citation = { url: string; title: string; snippet: string };
 
+// TEMP DEBUG (remove after diagnosis): reveals whether a web search actually ran
+// and what annotations the model attached.
+function logWebSearchDebug(label: string, response: OpenAI.Responses.Response) {
+  const itemTypes = response.output.map((i) => i.type);
+  const annTypes: string[] = [];
+  const searchSources: string[] = [];
+  for (const item of response.output) {
+    if (item.type === 'message') {
+      for (const part of item.content) {
+        if (part.type !== 'output_text') continue;
+        for (const ann of part.annotations) annTypes.push(ann.type);
+      }
+    } else if (item.type === 'web_search_call') {
+      const action = item.action;
+      if (action.type === 'search' && action.sources) {
+        for (const s of action.sources) searchSources.push(s.url);
+      } else if (action.type === 'open_page' && action.url) {
+        searchSources.push(action.url);
+      }
+    }
+  }
+  console.log(`[web-search-debug ${label}] outputItems=${JSON.stringify(itemTypes)} annotations=${JSON.stringify(annTypes)} searchSources=${JSON.stringify(searchSources)}`);
+}
+
 function extractCitations(response: OpenAI.Responses.Response): Citation[] {
   const byUrl = new Map<string, Citation>();
+  // Prefer rich url_citation annotations (title + snippet) from prose answers.
   for (const item of response.output) {
     if (item.type !== 'message') continue;
     for (const part of item.content) {
@@ -22,6 +47,20 @@ function extractCitations(response: OpenAI.Responses.Response): Citation[] {
         const snippet = part.text.slice(ann.start_index, ann.end_index).trim();
         byUrl.set(ann.url, { url: ann.url, title: ann.title, snippet });
       }
+    }
+  }
+  // Fallback for structured-output responses, which carry no annotations: use the
+  // grounded source URLs the web_search tool actually used. Requires
+  // include: ['web_search_call.action.sources'] on the request.
+  for (const item of response.output) {
+    if (item.type !== 'web_search_call') continue;
+    const { action } = item;
+    if (action.type === 'search' && action.sources) {
+      for (const source of action.sources) {
+        if (!byUrl.has(source.url)) byUrl.set(source.url, { url: source.url, title: '', snippet: '' });
+      }
+    } else if (action.type === 'open_page' && action.url) {
+      if (!byUrl.has(action.url)) byUrl.set(action.url, { url: action.url, title: '', snippet: '' });
     }
   }
   return [...byUrl.values()];
@@ -162,6 +201,7 @@ export async function chatAboutTerm(
     model: 'gpt-5.4-mini',
     tools: [{ type: 'web_search' }],
     tool_choice: forceWeb ? 'required' : 'auto',
+    include: ['web_search_call.action.sources'],
     input: [
       { role: 'system', content: CHAT_SYSTEM_PROMPT(termName, termContent) },
       ...history,
@@ -169,6 +209,7 @@ export async function chatAboutTerm(
     ],
   });
 
+  logWebSearchDebug(`chat forceWeb=${forceWeb}`, response);
   const answer = response.output_text;
   if (!answer) throw new Error('Empty response from OpenAI');
   return { answer, citations: extractCitations(response) };
@@ -180,6 +221,7 @@ export async function explainTermWithAI(term: string, allowedCategories: string[
     model: 'gpt-5.4-mini',
     tools: [{ type: 'web_search' }],
     tool_choice: forceWeb ? 'required' : 'auto',
+    include: ['web_search_call.action.sources'],
     input: [
       { role: 'system', content: buildSystemPrompt(allowedCategories) },
       { role: 'user', content: userContent },
@@ -203,6 +245,7 @@ export async function explainTermWithAI(term: string, allowedCategories: string[
     },
   });
 
+  logWebSearchDebug(`explain forceWeb=${forceWeb}`, response);
   const raw = response.output_text;
   if (!raw) throw new Error('Empty response from OpenAI');
 
