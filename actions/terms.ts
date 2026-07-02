@@ -71,12 +71,12 @@ export async function searchTerms(q: string): Promise<Term[]> {
   });
 }
 
-export async function regenerateTerm(id: number, name: string, context?: string): Promise<Term> {
+export async function regenerateTerm(id: number, name: string, context?: string, useWeb = false): Promise<Term> {
   const [{ credentials }, user] = await Promise.all([getNotionCredentials(), getCurrentUser()]);
   if (!user) throw new Error('Not authenticated');
   const dbCategories = await getAllCategories(user.id);
   const categoryNames = dbCategories.map((c) => c.name);
-  const explanation = await explainTermWithAI(name, categoryNames, context);
+  const explanation = await explainTermWithAI(name, categoryNames, context, useWeb);
   const updated = await updateTerm(id, {
     content: explanation.content,
     categories: explanation.categories,

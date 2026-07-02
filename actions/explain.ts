@@ -18,7 +18,7 @@ function isDuplicateKeyError(err: unknown): boolean {
   );
 }
 
-export async function explainTerm(rawName: string, context?: string): Promise<ExplainResult> {
+export async function explainTerm(rawName: string, context?: string, useWeb = false): Promise<ExplainResult> {
   const name = rawName.trim().toLowerCase();
   if (!name) throw new Error('Term name is required');
 
@@ -32,7 +32,7 @@ export async function explainTerm(rawName: string, context?: string): Promise<Ex
 
   const dbCategories = await getAllCategories(user.id);
   const categoryNames = dbCategories.map((c) => c.name);
-  const explanation = await explainTermWithAI(name, categoryNames, context);
+  const explanation = await explainTermWithAI(name, categoryNames, context, useWeb);
 
   let term: Term;
   try {

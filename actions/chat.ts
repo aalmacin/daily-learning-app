@@ -6,6 +6,7 @@ import { chatAboutTerm } from '@/lib/openai';
 export async function askQuestion(
   refinementId: number,
   question: string,
+  useWeb = false,
 ): Promise<ChatMessage[]> {
   const refinement = await getRefinementById(refinementId);
   if (!refinement) throw new Error('Refinement not found');
@@ -20,6 +21,7 @@ export async function askQuestion(
     term.content,
     history.map(({ role, content }) => ({ role, content })),
     question,
+    useWeb,
   );
 
   await insertChatMessages([

@@ -156,10 +156,12 @@ export async function chatAboutTerm(
   termContent: string,
   history: Array<{ role: 'user' | 'assistant'; content: string }>,
   question: string,
+  forceWeb = false,
 ): Promise<{ answer: string; citations: Citation[] }> {
   const response = await client.responses.create({
     model: 'gpt-5.4-mini',
     tools: [{ type: 'web_search' }],
+    tool_choice: forceWeb ? 'required' : 'auto',
     input: [
       { role: 'system', content: CHAT_SYSTEM_PROMPT(termName, termContent) },
       ...history,
@@ -172,11 +174,12 @@ export async function chatAboutTerm(
   return { answer, citations: extractCitations(response) };
 }
 
-export async function explainTermWithAI(term: string, allowedCategories: string[], context?: string): Promise<TermExplanation & { citations: Citation[] }> {
+export async function explainTermWithAI(term: string, allowedCategories: string[], context?: string, forceWeb = false): Promise<TermExplanation & { citations: Citation[] }> {
   const userContent = context ? `Term: ${term}\nContext: ${context}` : term;
   const response = await client.responses.create({
     model: 'gpt-5.4-mini',
     tools: [{ type: 'web_search' }],
+    tool_choice: forceWeb ? 'required' : 'auto',
     input: [
       { role: 'system', content: buildSystemPrompt(allowedCategories) },
       { role: 'user', content: userContent },
