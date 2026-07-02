@@ -76,3 +76,15 @@ Dedup + accumulation are enforced by `UNIQUE (term_id, url)` together with inser
 - Web search for the evaluator calls (`evaluatePreRefinement`, `evaluateRefinement`).
 - Citation editing/deletion by the user.
 - Surfacing citations in Notion sync.
+
+## Addendum (2026-07-01): force-web toggle
+
+The initial version left search entirely to the model's discretion (`web_search` tool attached, model decides). In practice the model often declined to search even when it should (e.g. "Claude Fable"). Added a user-controlled "Search the web" toggle:
+
+- Mechanism: the toggle sets `tool_choice` on the Responses call — `'required'` (forces the model to call a tool; `web_search` is the only one attached, so it must search) when on, `'auto'` (original behavior) when off.
+- Threaded UI → action → lib via a `forceWeb`/`useWeb` flag defaulting to `false` (backward compatible).
+- Off keeps `'auto'`: the tool stays attached and the model may still search on its own, so citations can still appear.
+- Controls default OFF and appear on the explain form (single + multiple), the regenerate action, and the Ask AI chat (both the detail page and search-result panels).
+- Note: `web_search` is not forcible by name via `tool_choice` (only `web_search_preview` is in the SDK enum), so `'required'` is used — valid because `web_search` is the sole attached tool.
+
+See plan: `docs/superpowers/plans/2026-07-01-force-web-search-toggle.md`.
