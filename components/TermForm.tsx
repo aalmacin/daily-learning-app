@@ -20,7 +20,7 @@ export function TermForm({ defaultTerm, compact, onExplainComplete }: Props = {}
   const { recentContexts, saveContext } = useRecentContexts()
 
   const singleForm = useForm({
-    defaultValues: { termName: defaultTerm ?? '', context: '' },
+    defaultValues: { termName: defaultTerm ?? '', context: '', useWeb: false },
     onSubmit: async ({ value }) => {
       setSubmitAttempted(false)
       const name = value.termName.trim().toLowerCase()
@@ -28,7 +28,7 @@ export function TermForm({ defaultTerm, compact, onExplainComplete }: Props = {}
       saveContext(value.context)
       singleForm.setFieldValue('termName', '')
       try {
-        const term = await explainTerm(value.termName, value.context || undefined)
+        const term = await explainTerm(value.termName, value.context || undefined, value.useWeb)
         resolveTermResult(name, term)
         onExplainComplete?.()
       } catch (e) {
@@ -38,7 +38,7 @@ export function TermForm({ defaultTerm, compact, onExplainComplete }: Props = {}
   })
 
   const multipleForm = useForm({
-    defaultValues: { terms: '', context: '' },
+    defaultValues: { terms: '', context: '', useWeb: false },
     onSubmit: async ({ value }) => {
       const terms = value.terms
         .split('\n')
@@ -51,7 +51,7 @@ export function TermForm({ defaultTerm, compact, onExplainComplete }: Props = {}
       multipleForm.setFieldValue('terms', '')
       terms.forEach((termName) => {
         const name = termName.toLowerCase()
-        explainTerm(termName, value.context || undefined)
+        explainTerm(termName, value.context || undefined, value.useWeb)
           .then((term) => resolveTermResult(name, term))
           .catch((e) => rejectTermResult(name, e instanceof Error ? e.message : 'Something went wrong'))
       })
@@ -120,6 +120,20 @@ export function TermForm({ defaultTerm, compact, onExplainComplete }: Props = {}
               className={inputClass}
             />
           </div>
+        )}
+      </singleForm.Field>
+
+      <singleForm.Field name="useWeb">
+        {(field) => (
+          <label className="flex items-center gap-1.5 text-xs text-zinc-600 dark:text-zinc-400 select-none cursor-pointer">
+            <input
+              type="checkbox"
+              checked={field.state.value}
+              onChange={(e) => field.handleChange(e.target.checked)}
+              className="accent-cyan-600"
+            />
+            Search the web
+          </label>
         )}
       </singleForm.Field>
 
@@ -237,6 +251,20 @@ export function TermForm({ defaultTerm, compact, onExplainComplete }: Props = {}
                   className={inputClass}
                 />
               </div>
+            )}
+          </multipleForm.Field>
+
+          <multipleForm.Field name="useWeb">
+            {(field) => (
+              <label className="flex items-center gap-1.5 text-xs text-zinc-600 dark:text-zinc-400 select-none cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.checked)}
+                  className="accent-cyan-600"
+                />
+                Search the web
+              </label>
             )}
           </multipleForm.Field>
 

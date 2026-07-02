@@ -68,6 +68,7 @@ export function TermDetailPage({ term, initialRefinements, initialChats, explain
   const [dateSaveStatus, setDateSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [allChats, setAllChats] = useState<Record<number, ChatMessage[]>>(initialChats);
   const [chatInput, setChatInput] = useState('');
+  const [chatUseWeb, setChatUseWeb] = useState(false);
 
   const [, startDate] = useTransition();
   const [isPendingPre, startPre] = useTransition();
@@ -219,7 +220,7 @@ export function TermDetailPage({ term, initialRefinements, initialChats, explain
     setChatInput('');
     startChat(async () => {
       try {
-        const updated = await askQuestion(refinementId, question);
+        const updated = await askQuestion(refinementId, question, chatUseWeb);
         setAllChats((prev) => ({ ...prev, [refinementId]: updated }));
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Failed to send message');
@@ -246,7 +247,7 @@ export function TermDetailPage({ term, initialRefinements, initialChats, explain
           ...prev,
           [newAttempt.id]: [{ id: -1, refinement_id: newAttempt.id, role: 'user' as const, content: question, created_at: new Date().toISOString() }],
         }));
-        const updated = await askQuestion(newAttempt.id, question);
+        const updated = await askQuestion(newAttempt.id, question, chatUseWeb);
         setAllChats((prev) => ({ ...prev, [newAttempt.id]: updated }));
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Failed to start research');
@@ -413,6 +414,10 @@ export function TermDetailPage({ term, initialRefinements, initialChats, explain
                         disabled={isPendingChat}
                         className="flex-1 px-3 py-2 text-xs border border-zinc-200 dark:border-zinc-700 rounded-lg bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:focus:ring-zinc-600 disabled:opacity-50"
                       />
+                      <label className="flex items-center gap-1.5 text-xs text-zinc-600 dark:text-zinc-400 select-none cursor-pointer">
+                        <input type="checkbox" checked={chatUseWeb} onChange={(e) => setChatUseWeb(e.target.checked)} className="accent-cyan-600" />
+                        Search the web
+                      </label>
                       <button
                         onClick={handleStartResearch}
                         disabled={!chatInput.trim() || isPendingChat}
@@ -567,6 +572,10 @@ export function TermDetailPage({ term, initialRefinements, initialChats, explain
                           disabled={isPendingChat}
                           className="flex-1 px-3 py-2 text-xs border border-zinc-200 dark:border-zinc-700 rounded-lg bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:focus:ring-zinc-600 disabled:opacity-50"
                         />
+                        <label className="flex items-center gap-1.5 text-xs text-zinc-600 dark:text-zinc-400 select-none cursor-pointer">
+                          <input type="checkbox" checked={chatUseWeb} onChange={(e) => setChatUseWeb(e.target.checked)} className="accent-cyan-600" />
+                          Search the web
+                        </label>
                         <button
                           onClick={() => handleAskQuestion(viewing.id)}
                           disabled={!chatInput.trim() || isPendingChat}

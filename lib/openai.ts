@@ -8,11 +8,75 @@ export type TermExplanation = {
 
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
+export type Citation = { url: string; title: string; snippet: string };
+
+// Keep only the most relevant sources per response: cited-in-answer annotations
+// rank ahead of consulted-only search sources (insertion order below reflects this).
+const MAX_CITATIONS_PER_RESPONSE = 5;
+
+// TEMP DEBUG (remove after diagnosis): reveals whether a web search actually ran
+// and what annotations the model attached.
+function logWebSearchDebug(label: string, response: OpenAI.Responses.Response) {
+  const itemTypes = response.output.map((i) => i.type);
+  const annTypes: string[] = [];
+  const searchSources: string[] = [];
+  for (const item of response.output) {
+    if (item.type === 'message') {
+      for (const part of item.content) {
+        if (part.type !== 'output_text') continue;
+        for (const ann of part.annotations) annTypes.push(ann.type);
+      }
+    } else if (item.type === 'web_search_call') {
+      const action = item.action;
+      if (action.type === 'search' && action.sources) {
+        for (const s of action.sources) searchSources.push(s.url);
+      } else if (action.type === 'open_page' && action.url) {
+        searchSources.push(action.url);
+      }
+    }
+  }
+  console.log(`[web-search-debug ${label}] outputItems=${JSON.stringify(itemTypes)} annotations=${JSON.stringify(annTypes)} searchSources=${JSON.stringify(searchSources)}`);
+}
+
+function extractCitations(response: OpenAI.Responses.Response): Citation[] {
+  const byUrl = new Map<string, Citation>();
+  // Prefer rich url_citation annotations (title + snippet) from prose answers.
+  for (const item of response.output) {
+    if (item.type !== 'message') continue;
+    for (const part of item.content) {
+      if (part.type !== 'output_text') continue;
+      for (const ann of part.annotations) {
+        if (ann.type !== 'url_citation') continue;
+        if (byUrl.has(ann.url)) continue;
+        const snippet = part.text.slice(ann.start_index, ann.end_index).trim();
+        byUrl.set(ann.url, { url: ann.url, title: ann.title, snippet });
+      }
+    }
+  }
+  // Fallback for structured-output responses, which carry no annotations: use the
+  // grounded source URLs the web_search tool actually used. Requires
+  // include: ['web_search_call.action.sources'] on the request.
+  for (const item of response.output) {
+    if (item.type !== 'web_search_call') continue;
+    const { action } = item;
+    if (action.type === 'search' && action.sources) {
+      for (const source of action.sources) {
+        if (!byUrl.has(source.url)) byUrl.set(source.url, { url: source.url, title: '', snippet: '' });
+      }
+    } else if (action.type === 'open_page' && action.url) {
+      if (!byUrl.has(action.url)) byUrl.set(action.url, { url: action.url, title: '', snippet: '' });
+    }
+  }
+  return [...byUrl.values()].slice(0, MAX_CITATIONS_PER_RESPONSE);
+}
+
 function buildSystemPrompt(categories: string[]): string {
   return `You are a technical learning assistant. When given a technical term or concept, respond with a JSON object with exactly these fields:
 - "name": the properly cased term name as it is conventionally written (string, e.g. "DKIM", "TCP/IP", "GraphQL", "OAuth 2.0")
 - "content": a clear, concise explanation suitable for a technical notes database (string, 2-4 sentences)
 - "categories": an array of categories chosen ONLY from this exact list (use the exact casing shown): ${categories.join(', ')}. Use "Uncategorized" ONLY if none of the other categories apply — never combine it with other categories.
+
+Use web search to verify facts and to capture concepts that may be newer than your training knowledge whenever you are uncertain.
 
 Respond ONLY with valid JSON, no markdown or extra text.`;
 }
@@ -127,40 +191,66 @@ export async function evaluateRefinement(
 const CHAT_SYSTEM_PROMPT = (termName: string, termContent: string) =>
   `You are a research assistant helping the user understand the concept "${termName}".
 Context: ${termContent}
-Answer only questions directly related to this concept. Be concise: respond in plain prose, no markdown, no bullet points. Maximum 2 short paragraphs.`;
+Answer only questions directly related to this concept. Be concise: respond in plain prose, no markdown, no bullet points. Maximum 2 short paragraphs.
+Use web search to answer accurately when you are uncertain or when the information may be newer than your training knowledge.`;
 
 export async function chatAboutTerm(
   termName: string,
   termContent: string,
   history: Array<{ role: 'user' | 'assistant'; content: string }>,
   question: string,
-): Promise<string> {
-  const response = await client.chat.completions.create({
+  forceWeb = false,
+): Promise<{ answer: string; citations: Citation[] }> {
+  const response = await client.responses.create({
     model: 'gpt-5.4-mini',
-    messages: [
+    tools: [{ type: 'web_search' }],
+    tool_choice: forceWeb ? 'required' : 'auto',
+    include: ['web_search_call.action.sources'],
+    input: [
       { role: 'system', content: CHAT_SYSTEM_PROMPT(termName, termContent) },
       ...history,
       { role: 'user', content: question },
     ],
   });
 
-  const content = response.choices[0]?.message?.content;
-  if (!content) throw new Error('Empty response from OpenAI');
-  return content;
+  logWebSearchDebug(`chat forceWeb=${forceWeb}`, response);
+  const answer = response.output_text;
+  if (!answer) throw new Error('Empty response from OpenAI');
+  return { answer, citations: extractCitations(response) };
 }
 
-export async function explainTermWithAI(term: string, allowedCategories: string[], context?: string): Promise<TermExplanation> {
+export async function explainTermWithAI(term: string, allowedCategories: string[], context?: string, forceWeb = false): Promise<TermExplanation & { citations: Citation[] }> {
   const userContent = context ? `Term: ${term}\nContext: ${context}` : term;
-  const response = await client.chat.completions.create({
+  const response = await client.responses.create({
     model: 'gpt-5.4-mini',
-    messages: [
+    tools: [{ type: 'web_search' }],
+    tool_choice: forceWeb ? 'required' : 'auto',
+    include: ['web_search_call.action.sources'],
+    input: [
       { role: 'system', content: buildSystemPrompt(allowedCategories) },
       { role: 'user', content: userContent },
     ],
-    response_format: { type: 'json_object' },
+    text: {
+      format: {
+        type: 'json_schema',
+        name: 'term_explanation',
+        strict: true,
+        schema: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            name: { type: 'string' },
+            content: { type: 'string' },
+            categories: { type: 'array', items: { type: 'string' } },
+          },
+          required: ['name', 'content', 'categories'],
+        },
+      },
+    },
   });
 
-  const raw = response.choices[0]?.message?.content;
+  logWebSearchDebug(`explain forceWeb=${forceWeb}`, response);
+  const raw = response.output_text;
   if (!raw) throw new Error('Empty response from OpenAI');
 
   const parsed = JSON.parse(raw) as Partial<TermExplanation>;
@@ -181,6 +271,7 @@ export async function explainTermWithAI(term: string, allowedCategories: string[
     name: parsed.name,
     content: parsed.content,
     categories: specificCategories.length > 0 ? specificCategories : ['Uncategorized'],
+    citations: extractCitations(response),
   };
 }
 

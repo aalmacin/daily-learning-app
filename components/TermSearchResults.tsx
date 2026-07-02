@@ -36,6 +36,7 @@ function ResearchChat({ term }: { term: Term }) {
   const [chat, setChat] = useState<ChatState | null>(null);
   const [loading, setLoading] = useState(true);
   const [input, setInput] = useState('');
+  const [useWeb, setUseWeb] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -65,10 +66,10 @@ function ResearchChat({ term }: { term: Term }) {
       try {
         if (!chat) {
           const refinement = await createAttempt(term.id);
-          const messages = await askQuestion(refinement.id, question);
+          const messages = await askQuestion(refinement.id, question, useWeb);
           setChat({ refinementId: refinement.id, messages });
         } else {
-          const messages = await askQuestion(chat.refinementId, question);
+          const messages = await askQuestion(chat.refinementId, question, useWeb);
           setChat((prev) => prev ? { ...prev, messages } : prev);
         }
       } catch (err) {
@@ -109,6 +110,10 @@ function ResearchChat({ term }: { term: Term }) {
           disabled={isDisabled}
           className="flex-1 px-2.5 py-1.5 text-xs border border-zinc-200 dark:border-zinc-700 rounded-md bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:focus:ring-zinc-600 disabled:opacity-50"
         />
+        <label className="flex items-center gap-1.5 text-xs text-zinc-600 dark:text-zinc-400 select-none cursor-pointer">
+          <input type="checkbox" checked={useWeb} onChange={(e) => setUseWeb(e.target.checked)} className="accent-cyan-600" />
+          Search the web
+        </label>
         <button
           type="submit"
           disabled={!input.trim() || isDisabled}

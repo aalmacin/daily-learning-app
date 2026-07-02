@@ -1,6 +1,6 @@
 'use server';
 
-import { getTerm, insertTerm, updateTerm, deleteTerm, getAllCategories, getUserSettings } from '@/lib/db';
+import { getTerm, insertTerm, updateTerm, deleteTerm, getAllCategories, getUserSettings, insertTermCitations } from '@/lib/db';
 import { explainTermWithAI } from '@/lib/openai';
 import { getCurrentUser } from '@/lib/auth';
 import { createNotionPage, archiveNotionPage } from '@/lib/notion';
@@ -18,7 +18,7 @@ function isDuplicateKeyError(err: unknown): boolean {
   );
 }
 
-export async function explainTerm(rawName: string, context?: string): Promise<ExplainResult> {
+export async function explainTerm(rawName: string, context?: string, useWeb = false): Promise<ExplainResult> {
   const name = rawName.trim().toLowerCase();
   if (!name) throw new Error('Term name is required');
 
@@ -32,7 +32,7 @@ export async function explainTerm(rawName: string, context?: string): Promise<Ex
 
   const dbCategories = await getAllCategories(user.id);
   const categoryNames = dbCategories.map((c) => c.name);
-  const explanation = await explainTermWithAI(name, categoryNames, context);
+  const explanation = await explainTermWithAI(name, categoryNames, context, useWeb);
 
   let term: Term;
   try {
@@ -51,10 +51,14 @@ export async function explainTerm(rawName: string, context?: string): Promise<Ex
   } catch (err) {
     if (isDuplicateKeyError(err)) {
       const existing = await getTerm(name, user.id);
-      if (existing) return { ...existing, alreadyExisted: true };
+      if (existing) {
+        await insertTermCitations(existing.id, explanation.citations);
+        return { ...existing, alreadyExisted: true };
+      }
     }
     throw err;
   }
+  await insertTermCitations(term.id, explanation.citations);
   const settings = await getUserSettings(user.id);
   if (settings?.notion_api_key && settings?.notion_database_id) {
     const credentials = { apiKey: settings.notion_api_key, databaseId: settings.notion_database_id };

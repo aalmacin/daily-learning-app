@@ -1,6 +1,6 @@
 'use server';
 
-import { deleteTerm as dbDeleteTerm, getAllCategories, getAllTerms, getTermById, getTermsPaginated, getUserSettings, updateTerm } from '@/lib/db';
+import { deleteTerm as dbDeleteTerm, getAllCategories, getAllTerms, getTermById, getTermsPaginated, getUserSettings, insertTermCitations, updateTerm } from '@/lib/db';
 import { explainTermWithAI } from '@/lib/openai';
 import { getCurrentUser } from '@/lib/auth';
 import { archiveNotionPage, unarchiveNotionPage, updateNotionPageContent, updateNotionPageMetadata } from '@/lib/notion';
@@ -71,18 +71,20 @@ export async function searchTerms(q: string): Promise<Term[]> {
   });
 }
 
-export async function regenerateTerm(id: number, name: string, context?: string): Promise<Term> {
+export async function regenerateTerm(id: number, name: string, context?: string, useWeb = false): Promise<Term> {
   const [{ credentials }, user] = await Promise.all([getNotionCredentials(), getCurrentUser()]);
   if (!user) throw new Error('Not authenticated');
   const dbCategories = await getAllCategories(user.id);
   const categoryNames = dbCategories.map((c) => c.name);
-  const explanation = await explainTermWithAI(name, categoryNames, context);
+  const explanation = await explainTermWithAI(name, categoryNames, context, useWeb);
   const updated = await updateTerm(id, {
     content: explanation.content,
     categories: explanation.categories,
   }, user.id);
 
   if (!updated) throw new Error('Term not found');
+
+  await insertTermCitations(updated.id, explanation.citations);
 
   if (updated.notion_page_id && credentials) {
     await Promise.all([

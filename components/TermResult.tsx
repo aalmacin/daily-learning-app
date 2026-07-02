@@ -69,6 +69,7 @@ function ErrorCard({ name, error }: { name: string; error: string }) {
 
 function DoneTermCard({ term }: { term: DoneTermResult }) {
   const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [regenUseWeb, setRegenUseWeb] = useState(false)
 
   const { data: allCategories = [] } = useQuery({
     queryKey: queryKeys.categories.all(),
@@ -76,7 +77,7 @@ function DoneTermCard({ term }: { term: DoneTermResult }) {
   })
 
   const regenerateMutation = useMutation({
-    mutationFn: () => regenerateTerm(term.id, term.name),
+    mutationFn: () => regenerateTerm(term.id, term.name, undefined, regenUseWeb),
     onSuccess: updateTermInStore,
   })
 
@@ -203,6 +204,10 @@ function DoneTermCard({ term }: { term: DoneTermResult }) {
         >
           {regenerateMutation.isPending ? 'Regenerating…' : 'Regenerate'}
         </button>
+        <label className="flex items-center gap-1.5 text-xs text-zinc-600 dark:text-zinc-400 select-none cursor-pointer">
+          <input type="checkbox" checked={regenUseWeb} onChange={(e) => setRegenUseWeb(e.target.checked)} className="accent-cyan-600" />
+          Search the web
+        </label>
 
         {confirmingDelete ? (
           <>
