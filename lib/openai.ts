@@ -288,10 +288,10 @@ function buildVocabularyPrompt(type: 'word' | 'idiom'): string {
   return `You are a vocabulary learning assistant. Given a ${typeLabel}, respond with a JSON object with exactly these fields:
 
 - "definition": What the ${typeLabel} means AND what it does NOT mean (common misconceptions). 2-3 sentences.
-- "context": A natural example sentence using the ${typeLabel} in context. Make it vivid and memorable.
+- "context": An example sentence that sounds like something a real person would actually say in everyday conversation — chatting with a coworker, a friend, or a stranger. Keep it casual, natural, and light; no need to be deep or literary. Pick a situation where using the ${typeLabel} genuinely fits so the usage feels natural, not forced.
 - "connections": Connect the ${typeLabel} to a well-known person, event, character, or cultural reference to aid memory. For example, "Alfred the butler in Batman is a factotum — he does everything for Bruce Wayne." 1-2 sentences.
 - "morphology": The structural analysis — Latin or Greek roots, prefixes, suffixes, morphemes, etymology. Explain how the parts build the meaning. 1-3 sentences.
-- "flashcard_sentence": A sentence using the ${typeLabel} where the ${typeLabel} itself is replaced with a blank marker __blank__. The sentence should be different from the context sentence. It should provide enough clues for someone to guess the ${typeLabel}.
+- "flashcard_sentence": A sentence using the ${typeLabel} where the ${typeLabel} itself is replaced with a blank marker __blank__. Like the context field, it should sound like natural everyday speech someone would use at work or with friends. It must be different from the context sentence and provide enough clues for someone to guess the ${typeLabel}.
 
 Respond ONLY with valid JSON, no markdown or extra text.`;
 }
