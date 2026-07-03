@@ -19,11 +19,14 @@ export function VocabularyFlashcards({ words }: Props) {
   const [imageError, setImageError] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
-    const list = filter === 'all' ? wordState : wordState.filter((w) => w.type === filter);
+    const list = filter === 'all' ? words : words.filter((w) => w.type === filter);
     return [...list].sort(() => Math.random() - 0.5);
-  }, [wordState, filter]);
+  }, [words, filter]);
 
-  const current = filtered[currentIndex] ?? null;
+  const currentBase = filtered[currentIndex] ?? null;
+  const current = currentBase
+    ? (wordState.find((w) => w.id === currentBase.id) ?? currentBase)
+    : null;
 
   const handleNext = () => {
     setShowBack(false);
@@ -40,6 +43,8 @@ export function VocabularyFlashcards({ words }: Props) {
     setFilter(newFilter);
     setCurrentIndex(0);
     setShowBack(false);
+    setImageError(null);
+    setGenerating(false);
   };
 
   const handleGenerate = async () => {
@@ -155,6 +160,7 @@ export function VocabularyFlashcards({ words }: Props) {
 
                   <div className="flex items-center gap-2">
                     <select
+                      aria-label="Image model"
                       value={selectedModel}
                       onChange={(e) => setSelectedModel(e.target.value)}
                       disabled={generating}
