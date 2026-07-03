@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import { removeVocabularyWord } from '@/actions/vocabulary';
 import type { VocabularyWord } from '@/lib/db';
+import { VocabularyImage } from '@/components/VocabularyImage';
 
 type Props = {
   initialWords: VocabularyWord[];
@@ -81,6 +82,19 @@ export function VocabularyList({ initialWords }: Props) {
                     <Section title="Context" content={w.context} />
                     <Section title="Connections" content={w.connections} />
                     <Section title="Morphology" content={w.morphology} />
+                    <VocabularyImage
+                      wordId={w.id}
+                      word={w.word}
+                      imageUrl={w.image_url}
+                      imageModel={w.image_model}
+                      onGenerated={(imageUrl, imageModel) =>
+                        setWords((prev) =>
+                          prev.map((x) =>
+                            x.id === w.id ? { ...x, image_url: imageUrl, image_model: imageModel } : x,
+                          ),
+                        )
+                      }
+                    />
                     <div className="pt-2">
                       <button
                         onClick={() => handleDelete(w.id)}

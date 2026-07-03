@@ -2,8 +2,9 @@
 
 import { useState } from 'react'
 import { useStore } from '@tanstack/react-store'
-import { vocabStore, dismissWord, removeWordFromStore, type VocabResult, type DoneVocabResult } from '@/store/vocabStore'
+import { vocabStore, dismissWord, removeWordFromStore, updateWordImageInStore, type VocabResult, type DoneVocabResult } from '@/store/vocabStore'
 import { removeVocabularyWord } from '@/actions/vocabulary'
+import { VocabularyImage } from '@/components/VocabularyImage'
 
 function DismissButton({ onDismiss }: { onDismiss: () => void }) {
   return (
@@ -95,6 +96,13 @@ function DoneVocabCard({ entry }: { entry: DoneVocabResult }) {
           <Section title="Context" content={entry.context} />
           <Section title="Connections" content={entry.connections} />
           <Section title="Morphology" content={entry.morphology} />
+          <VocabularyImage
+            wordId={entry.id}
+            word={entry.word}
+            imageUrl={entry.image_url}
+            imageModel={entry.image_model}
+            onGenerated={(imageUrl, imageModel) => updateWordImageInStore(entry.id, imageUrl, imageModel)}
+          />
           <div className="pt-2 flex items-center gap-3">
             <button
               onClick={handleDelete}
