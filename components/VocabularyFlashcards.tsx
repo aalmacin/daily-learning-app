@@ -2,6 +2,8 @@
 
 import { useState, useMemo } from 'react';
 import type { VocabularyWord } from '@/lib/db';
+import { generateWordImage } from '@/actions/vocabulary';
+import { IMAGE_MODELS, DEFAULT_IMAGE_MODEL } from '@/lib/imageModels';
 
 type Props = {
   words: VocabularyWord[];
@@ -11,16 +13,22 @@ export function VocabularyFlashcards({ words }: Props) {
   const [filter, setFilter] = useState<'all' | 'word' | 'idiom'>('all');
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showBack, setShowBack] = useState(false);
+  const [wordState, setWordState] = useState<VocabularyWord[]>(words);
+  const [selectedModel, setSelectedModel] = useState<string>(DEFAULT_IMAGE_MODEL);
+  const [generating, setGenerating] = useState(false);
+  const [imageError, setImageError] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
-    const list = filter === 'all' ? words : words.filter((w) => w.type === filter);
+    const list = filter === 'all' ? wordState : wordState.filter((w) => w.type === filter);
     return [...list].sort(() => Math.random() - 0.5);
-  }, [words, filter]);
+  }, [wordState, filter]);
 
   const current = filtered[currentIndex] ?? null;
 
   const handleNext = () => {
     setShowBack(false);
+    setImageError(null);
+    setGenerating(false);
     if (currentIndex < filtered.length - 1) {
       setCurrentIndex((i) => i + 1);
     } else {
@@ -32,6 +40,32 @@ export function VocabularyFlashcards({ words }: Props) {
     setFilter(newFilter);
     setCurrentIndex(0);
     setShowBack(false);
+  };
+
+  const handleGenerate = async () => {
+    if (!current || generating) return;
+    setGenerating(true);
+    setImageError(null);
+    try {
+      const { imageUrl, imageModel } = await generateWordImage(current.id, selectedModel);
+      setWordState((prev) =>
+        prev.map((w) =>
+          w.id === current.id
+            ? { ...w, image_url: imageUrl, image_model: imageModel }
+            : w,
+        ),
+      );
+    } catch {
+      setImageError('Could not generate image. Try again.');
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleShowBack = () => {
+    setShowBack(true);
+    setImageError(null);
+    if (current?.image_model) setSelectedModel(current.image_model);
   };
 
   if (words.length === 0) {
@@ -105,6 +139,50 @@ export function VocabularyFlashcards({ words }: Props) {
                 <DetailSection title="Context" content={current.context} />
                 <DetailSection title="Connections" content={current.connections} />
                 <DetailSection title="Morphology" content={current.morphology} />
+                <div className="pt-2">
+                  <h4 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400 mb-2">
+                    Image
+                  </h4>
+
+                  {current.image_url && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={current.image_url}
+                      alt={`Illustration for ${current.word}`}
+                      className="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 mb-3"
+                    />
+                  )}
+
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={selectedModel}
+                      onChange={(e) => setSelectedModel(e.target.value)}
+                      disabled={generating}
+                      className="text-xs rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 px-2 py-1.5"
+                    >
+                      {IMAGE_MODELS.map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.label}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={handleGenerate}
+                      disabled={generating}
+                      className="px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-50 transition-colors"
+                    >
+                      {generating
+                        ? 'Generating…'
+                        : current.image_url
+                          ? 'Regenerate'
+                          : 'Generate image'}
+                    </button>
+                  </div>
+
+                  {imageError && (
+                    <p className="mt-2 text-xs text-red-600 dark:text-red-400">{imageError}</p>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -112,7 +190,7 @@ export function VocabularyFlashcards({ words }: Props) {
           {/* Actions */}
           {!showBack ? (
             <button
-              onClick={() => setShowBack(true)}
+              onClick={handleShowBack}
               className="w-full py-3 text-sm sm:text-base font-medium rounded-lg bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 hover:bg-zinc-700 dark:hover:bg-zinc-200 transition-colors"
             >
               Show Answer
