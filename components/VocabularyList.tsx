@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { removeVocabularyWord } from '@/actions/vocabulary';
-import type { VocabularyWord } from '@/lib/db';
+import { removeVocabularyWord, resetVocabularyReviewAction } from '@/actions/vocabulary';
+import { SRS_INTERVALS, type VocabularyWord } from '@/lib/db';
 import { VocabularyImage } from '@/components/VocabularyImage';
 
 type Props = {
@@ -23,6 +23,18 @@ export function VocabularyList({ initialWords }: Props) {
       setWords((prev) => prev.filter((w) => w.id !== id));
       if (expandedId === id) setExpandedId(null);
     });
+  };
+
+  const handleReset = (id: number) => {
+    startTransition(async () => {
+      const updated = await resetVocabularyReviewAction(id);
+      setWords((prev) => prev.map((w) => (w.id === id ? updated : w)));
+    });
+  };
+
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return null;
+    return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
   return (
@@ -95,14 +107,34 @@ export function VocabularyList({ initialWords }: Props) {
                         )
                       }
                     />
-                    <div className="pt-2">
-                      <button
-                        onClick={() => handleDelete(w.id)}
-                        disabled={isPending}
-                        className="text-xs text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-40"
-                      >
-                        Delete
-                      </button>
+                    <div className="pt-2 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+                      <div className="flex flex-wrap gap-2 text-xs text-zinc-400 dark:text-zinc-500">
+                        {w.next_review ? (
+                          <>
+                            <span>Interval: {SRS_INTERVALS[w.interval_step]}d</span>
+                            <span>Next: {formatDate(w.next_review)}</span>
+                            <span>Last: {formatDate(w.last_reviewed)}</span>
+                          </>
+                        ) : (
+                          <span>New — not yet reviewed</span>
+                        )}
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleReset(w.id)}
+                          disabled={isPending}
+                          className="px-2 py-1 text-xs rounded border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 disabled:opacity-40 transition-colors"
+                        >
+                          Reset
+                        </button>
+                        <button
+                          onClick={() => handleDelete(w.id)}
+                          disabled={isPending}
+                          className="text-xs text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-40"
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}
