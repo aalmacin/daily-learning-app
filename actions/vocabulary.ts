@@ -8,6 +8,11 @@ import {
   deleteVocabularyWord,
   uploadVocabularyImage,
   updateVocabularyImage,
+  getDueVocabularyWords,
+  getNewVocabularyWords,
+  reviewVocabularyWord,
+  resetVocabularyReview,
+  getUserSettings,
   type VocabularyWord,
 } from '@/lib/db';
 import {
@@ -77,4 +82,33 @@ export async function generateWordImage(
 
   revalidatePath('/vocabulary/flashcards');
   return { imageUrl, imageModel: model };
+}
+
+export async function getVocabularyReviewCards(
+  type?: 'word' | 'idiom',
+): Promise<{ due: VocabularyWord[]; new: VocabularyWord[] }> {
+  const user = await getCurrentUser();
+  if (!user) throw new Error('Not authenticated');
+  const [due, newWords] = await Promise.all([
+    getDueVocabularyWords(user.id, type),
+    getNewVocabularyWords(user.id, type),
+  ]);
+  return { due, new: newWords };
+}
+
+export async function submitVocabularyReview(id: number, correct: boolean): Promise<VocabularyWord> {
+  const user = await getCurrentUser();
+  if (!user) throw new Error('Not authenticated');
+  const settings = await getUserSettings(user.id);
+  const word = await reviewVocabularyWord(id, user.id, correct, settings?.timezone);
+  revalidatePath('/vocabulary/flashcards');
+  return word;
+}
+
+export async function resetVocabularyReviewAction(id: number): Promise<VocabularyWord> {
+  const user = await getCurrentUser();
+  if (!user) throw new Error('Not authenticated');
+  const word = await resetVocabularyReview(id, user.id);
+  revalidatePath('/vocabulary');
+  return word;
 }

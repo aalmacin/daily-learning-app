@@ -1328,6 +1328,9 @@ export type VocabularyWord = {
   image_url: string | null;
   image_prompt: string | null;
   image_model: string | null;
+  interval_step: number;
+  next_review: string | null;
+  last_reviewed: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -1356,7 +1359,10 @@ export async function getVocabularyWordById(id: number, userId: string): Promise
 }
 
 export async function insertVocabularyWord(
-  input: Omit<VocabularyWord, 'id' | 'created_at' | 'updated_at' | 'image_url' | 'image_prompt' | 'image_model'>,
+  input: Omit<
+    VocabularyWord,
+    'id' | 'created_at' | 'updated_at' | 'image_url' | 'image_prompt' | 'image_model' | 'interval_step' | 'next_review' | 'last_reviewed'
+  >,
 ): Promise<VocabularyWord> {
   const { data, error } = await getSupabase()
     .from('vocabulary_words')
@@ -1409,6 +1415,83 @@ export async function updateVocabularyImage(
     .eq('id', wordId)
     .eq('user_id', userId);
   if (error) throw error;
+}
+
+export async function getDueVocabularyWords(userId: string, type?: 'word' | 'idiom'): Promise<VocabularyWord[]> {
+  let query = getSupabase()
+    .from('vocabulary_words')
+    .select('*')
+    .eq('user_id', userId)
+    .not('next_review', 'is', null)
+    .lte('next_review', new Date().toISOString());
+  if (type) query = query.eq('type', type);
+  query = query.order('next_review', { ascending: true });
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return data as VocabularyWord[];
+}
+
+export async function getNewVocabularyWords(userId: string, type?: 'word' | 'idiom'): Promise<VocabularyWord[]> {
+  let query = getSupabase()
+    .from('vocabulary_words')
+    .select('*')
+    .eq('user_id', userId)
+    .is('next_review', null);
+  if (type) query = query.eq('type', type);
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return data as VocabularyWord[];
+}
+
+export async function reviewVocabularyWord(id: number, userId: string, correct: boolean, timezone?: string): Promise<VocabularyWord> {
+  const { data: word, error: fetchError } = await getSupabase()
+    .from('vocabulary_words')
+    .select('*')
+    .eq('id', id)
+    .eq('user_id', userId)
+    .single();
+  if (fetchError) throw fetchError;
+
+  const current = word as VocabularyWord;
+  let newStep: number;
+  if (correct) {
+    newStep = Math.min(current.interval_step + 1, SRS_INTERVALS.length - 1);
+  } else {
+    newStep = 0;
+  }
+
+  const intervalDays = SRS_INTERVALS[newStep];
+  const startOfToday = getStartOfDay(timezone);
+  const nextReview = new Date(startOfToday);
+  nextReview.setDate(nextReview.getDate() + intervalDays);
+
+  const { data, error } = await getSupabase()
+    .from('vocabulary_words')
+    .update({
+      interval_step: newStep,
+      next_review: nextReview.toISOString(),
+      last_reviewed: new Date().toISOString(),
+    } as unknown as never)
+    .eq('id', id)
+    .eq('user_id', userId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as VocabularyWord;
+}
+
+export async function resetVocabularyReview(id: number, userId: string): Promise<VocabularyWord> {
+  const { data, error } = await getSupabase()
+    .from('vocabulary_words')
+    .update({ interval_step: 0, next_review: null, last_reviewed: null } as unknown as never)
+    .eq('id', id)
+    .eq('user_id', userId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as VocabularyWord;
 }
 
 export async function getTermsByCategory(userId: string, categoryId: number): Promise<CategoryTerm[]> {
