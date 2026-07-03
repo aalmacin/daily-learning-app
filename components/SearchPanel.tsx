@@ -3,8 +3,7 @@
 import { useEffect } from 'react'
 import { useStore } from '@tanstack/react-store'
 import { searchStore, closeSearch } from '@/store/searchStore'
-import { TermForm } from '@/components/TermForm'
-import { TermResult } from '@/components/TermResult'
+import { AddPanel } from '@/components/AddPanel'
 
 export function SearchPanel() {
   const isOpen = useStore(searchStore, (state) => state.isOpen)
@@ -29,7 +28,7 @@ export function SearchPanel() {
 
       <div
         role="dialog"
-        aria-label="Explain a term"
+        aria-label="Add"
         aria-modal={isOpen || undefined}
         aria-hidden={!isOpen}
         className={`fixed top-0 right-0 bottom-0 z-[55] w-full sm:w-[65vw] bg-white dark:bg-zinc-900 border-l border-zinc-200 dark:border-zinc-800 shadow-2xl flex flex-col transition-transform duration-300 ease-in-out ${
@@ -37,11 +36,11 @@ export function SearchPanel() {
         }`}
       >
         <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 shrink-0">
-          <span className="text-base font-semibold text-zinc-900 dark:text-zinc-50">Explain a Term</span>
+          <span className="text-base font-semibold text-zinc-900 dark:text-zinc-50">Add</span>
           <button
             type="button"
             onClick={closeSearch}
-            aria-label="Close search panel"
+            aria-label="Close panel"
             className="rounded-lg p-1.5 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -53,8 +52,7 @@ export function SearchPanel() {
 
         <div className="flex-1 overflow-y-auto py-8 px-6">
           <div className="max-w-2xl mx-auto flex flex-col gap-8">
-            <TermForm />
-            <TermResult />
+            <AddPanel />
           </div>
         </div>
       </div>

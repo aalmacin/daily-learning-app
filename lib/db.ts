@@ -1315,6 +1315,102 @@ export async function deleteVideoResearch(id: number, userId: string): Promise<v
   if (error) throw error;
 }
 
+export type VocabularyWord = {
+  id: number;
+  user_id: string;
+  word: string;
+  type: 'word' | 'idiom';
+  definition: string;
+  context: string;
+  connections: string;
+  morphology: string;
+  flashcard_sentence: string;
+  image_url: string | null;
+  image_prompt: string | null;
+  image_model: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export async function getVocabularyWords(userId: string, type?: 'word' | 'idiom'): Promise<VocabularyWord[]> {
+  let query = getSupabase()
+    .from('vocabulary_words')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+  if (type) query = query.eq('type', type);
+  const { data, error } = await query;
+  if (error) throw error;
+  return data as VocabularyWord[];
+}
+
+export async function getVocabularyWordById(id: number, userId: string): Promise<VocabularyWord | null> {
+  const { data, error } = await getSupabase()
+    .from('vocabulary_words')
+    .select('*')
+    .eq('id', id)
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (error) throw error;
+  return data as VocabularyWord | null;
+}
+
+export async function insertVocabularyWord(
+  input: Omit<VocabularyWord, 'id' | 'created_at' | 'updated_at' | 'image_url' | 'image_prompt' | 'image_model'>,
+): Promise<VocabularyWord> {
+  const { data, error } = await getSupabase()
+    .from('vocabulary_words')
+    .insert(input as unknown as never)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as VocabularyWord;
+}
+
+export async function deleteVocabularyWord(id: number, userId: string): Promise<void> {
+  const { error } = await getSupabase()
+    .from('vocabulary_words')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', userId);
+  if (error) throw error;
+}
+
+export async function uploadVocabularyImage(
+  userId: string,
+  wordId: number,
+  bytes: Buffer,
+): Promise<string> {
+  const path = `${userId}/${wordId}.png`;
+  const { error } = await getSupabase()
+    .storage.from('vocabulary-images')
+    .upload(path, bytes, { contentType: 'image/png', upsert: true });
+  if (error) throw error;
+  const { data } = getSupabase()
+    .storage.from('vocabulary-images')
+    .getPublicUrl(path);
+  return data.publicUrl;
+}
+
+export async function updateVocabularyImage(
+  wordId: number,
+  userId: string,
+  imageUrl: string,
+  imagePrompt: string,
+  imageModel: string,
+): Promise<void> {
+  const { error } = await getSupabase()
+    .from('vocabulary_words')
+    .update({
+      image_url: imageUrl,
+      image_prompt: imagePrompt,
+      image_model: imageModel,
+    } as unknown as never)
+    .eq('id', wordId)
+    .eq('user_id', userId);
+  if (error) throw error;
+}
+
 export async function getTermsByCategory(userId: string, categoryId: number): Promise<CategoryTerm[]> {
   const { data: cat, error: catError } = await getSupabase()
     .from('categories')

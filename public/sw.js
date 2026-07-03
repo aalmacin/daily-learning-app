@@ -87,6 +87,10 @@ self.addEventListener('fetch', (event) => {
 });
 
 // ---- Strategies -------------------------------------------------------------
+
+// Network-first for navigations: never writes to cache. Dynamic pages like
+// /terms/[id] would accumulate unbounded entries if cached here; the shell
+// cache is only written during install to keep it small and predictable.
 async function networkFirst(request) {
   try {
     return await fetch(request);
