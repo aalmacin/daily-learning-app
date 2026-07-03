@@ -3,11 +3,19 @@
 import { revalidatePath } from 'next/cache';
 import {
   getVocabularyWords,
+  getVocabularyWordById,
   insertVocabularyWord,
   deleteVocabularyWord,
+  uploadVocabularyImage,
+  updateVocabularyImage,
   type VocabularyWord,
 } from '@/lib/db';
-import { analyzeVocabulary } from '@/lib/openai';
+import {
+  analyzeVocabulary,
+  buildImagePrompt,
+  generateVocabularyImage,
+} from '@/lib/openai';
+import { isValidImageModel } from '@/lib/imageModels';
 import { getCurrentUser } from '@/lib/auth';
 
 export async function addVocabularyWord(
@@ -47,4 +55,26 @@ export async function fetchVocabularyWords(
   const user = await getCurrentUser();
   if (!user) throw new Error('Not authenticated');
   return getVocabularyWords(user.id, type);
+}
+
+export async function generateWordImage(
+  wordId: number,
+  model: string,
+): Promise<{ imageUrl: string; imageModel: string }> {
+  const user = await getCurrentUser();
+  if (!user) throw new Error('Not authenticated');
+  if (!isValidImageModel(model)) throw new Error('Invalid image model');
+
+  const word = await getVocabularyWordById(wordId, user.id);
+  if (!word) throw new Error('Word not found');
+
+  const prompt = await buildImagePrompt(word.word, word.context, word.definition);
+  const bytes = await generateVocabularyImage(prompt, model);
+  const publicUrl = await uploadVocabularyImage(user.id, wordId, bytes);
+  // Version the URL so overwritten (regenerated) images bypass browser/CDN cache.
+  const imageUrl = `${publicUrl}?v=${Date.now()}`;
+  await updateVocabularyImage(wordId, user.id, imageUrl, prompt, model);
+
+  revalidatePath('/vocabulary/flashcards');
+  return { imageUrl, imageModel: model };
 }
