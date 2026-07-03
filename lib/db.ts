@@ -1325,6 +1325,9 @@ export type VocabularyWord = {
   connections: string;
   morphology: string;
   flashcard_sentence: string;
+  image_url: string | null;
+  image_prompt: string | null;
+  image_model: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -1353,7 +1356,7 @@ export async function getVocabularyWordById(id: number, userId: string): Promise
 }
 
 export async function insertVocabularyWord(
-  input: Omit<VocabularyWord, 'id' | 'created_at' | 'updated_at'>,
+  input: Omit<VocabularyWord, 'id' | 'created_at' | 'updated_at' | 'image_url' | 'image_prompt' | 'image_model'>,
 ): Promise<VocabularyWord> {
   const { data, error } = await getSupabase()
     .from('vocabulary_words')
@@ -1369,6 +1372,41 @@ export async function deleteVocabularyWord(id: number, userId: string): Promise<
     .from('vocabulary_words')
     .delete()
     .eq('id', id)
+    .eq('user_id', userId);
+  if (error) throw error;
+}
+
+export async function uploadVocabularyImage(
+  userId: string,
+  wordId: number,
+  bytes: Buffer,
+): Promise<string> {
+  const path = `${userId}/${wordId}.png`;
+  const { error } = await getSupabase()
+    .storage.from('vocabulary-images')
+    .upload(path, bytes, { contentType: 'image/png', upsert: true });
+  if (error) throw error;
+  const { data } = getSupabase()
+    .storage.from('vocabulary-images')
+    .getPublicUrl(path);
+  return data.publicUrl;
+}
+
+export async function updateVocabularyImage(
+  wordId: number,
+  userId: string,
+  imageUrl: string,
+  imagePrompt: string,
+  imageModel: string,
+): Promise<void> {
+  const { error } = await getSupabase()
+    .from('vocabulary_words')
+    .update({
+      image_url: imageUrl,
+      image_prompt: imagePrompt,
+      image_model: imageModel,
+    } as unknown as never)
+    .eq('id', wordId)
     .eq('user_id', userId);
   if (error) throw error;
 }

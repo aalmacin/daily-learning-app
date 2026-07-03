@@ -326,6 +326,44 @@ export async function analyzeVocabulary(
   return parsed as VocabularyAnalysis;
 }
 
+export async function buildImagePrompt(
+  word: string,
+  context: string,
+  definition: string,
+): Promise<string> {
+  const response = await client.chat.completions.create({
+    model: 'gpt-5.4-mini',
+    messages: [
+      {
+        role: 'system',
+        content:
+          'You write prompts for an AI image generator. Given a vocabulary word, its definition, and an example sentence, write a single vivid, concrete image-generation prompt that depicts the scene of the example sentence and reinforces the word\'s meaning. Describe subject, composition, setting, mood, and lighting. Do NOT include any text, letters, words, captions, or writing in the image. Respond with the prompt text only — no quotes, no preamble.',
+      },
+      {
+        role: 'user',
+        content: `Word: ${word}\nDefinition: ${definition}\nExample sentence: ${context}`,
+      },
+    ],
+  });
+  const prompt = response.choices[0]?.message?.content?.trim();
+  if (!prompt) throw new Error('Empty image prompt from OpenAI');
+  return prompt;
+}
+
+export async function generateVocabularyImage(
+  prompt: string,
+  model: string,
+): Promise<Buffer> {
+  const response = await client.images.generate({
+    model,
+    prompt,
+    size: '1024x1024',
+  });
+  const b64 = response.data?.[0]?.b64_json;
+  if (!b64) throw new Error('No image returned from OpenAI');
+  return Buffer.from(b64, 'base64');
+}
+
 const VIDEO_MODEL = 'gpt-5.4-mini';
 
 export async function summarizeVideo(transcript: string): Promise<string> {
