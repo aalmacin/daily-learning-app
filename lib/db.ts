@@ -1315,6 +1315,12 @@ export async function deleteVideoResearch(id: number, userId: string): Promise<v
   if (error) throw error;
 }
 
+export type ContextSentence = { sentence: string; setting: string };
+
+export function fillBlank(sentence: string, word: string): string {
+  return sentence.replace('__blank__', word);
+}
+
 export type VocabularyWord = {
   id: number;
   user_id: string;
@@ -1322,9 +1328,10 @@ export type VocabularyWord = {
   type: 'word' | 'idiom';
   definition: string;
   context: string;
+  context_sentences: ContextSentence[] | null;
   connections: string;
   morphology: string;
-  flashcard_sentence: string;
+  flashcard_sentence: string | null;
   image_url: string | null;
   image_prompt: string | null;
   image_model: string | null;
@@ -1487,6 +1494,42 @@ export async function resetVocabularyReview(id: number, userId: string): Promise
     .from('vocabulary_words')
     .update({ interval_step: 0, next_review: null, last_reviewed: null } as unknown as never)
     .eq('id', id)
+    .eq('user_id', userId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as VocabularyWord;
+}
+
+export async function setMainContextSentence(
+  wordId: number,
+  userId: string,
+  index: number,
+): Promise<VocabularyWord> {
+  const { data: word, error: fetchError } = await getSupabase()
+    .from('vocabulary_words')
+    .select('*')
+    .eq('id', wordId)
+    .eq('user_id', userId)
+    .single();
+  if (fetchError) throw fetchError;
+
+  const current = word as VocabularyWord;
+  const sentences = current.context_sentences;
+  if (!sentences || index < 0 || index >= sentences.length) {
+    throw new Error('Invalid context sentence index');
+  }
+
+  const reordered = [sentences[index], ...sentences.slice(0, index), ...sentences.slice(index + 1)];
+  const newContext = fillBlank(reordered[0].sentence, current.word);
+
+  const { data, error } = await getSupabase()
+    .from('vocabulary_words')
+    .update({
+      context: newContext,
+      context_sentences: reordered,
+    } as unknown as never)
+    .eq('id', wordId)
     .eq('user_id', userId)
     .select()
     .single();
