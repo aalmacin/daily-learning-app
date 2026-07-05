@@ -1,6 +1,6 @@
 'use client';
 
-import type { ContextSentence } from '@/lib/db';
+import { fillBlank, type ContextSentence } from '@/lib/db';
 
 type Props = {
   context: string;
@@ -32,7 +32,7 @@ export function VocabularyContextSentences({ context, contextSentences, word, on
         {contextSentences.map((cs, i) => (
           <li key={i} className="flex items-start gap-2 text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed">
             <div className="flex-1 whitespace-pre-wrap">
-              {cs.sentence.replace('__blank__', word)}
+              {fillBlank(cs.sentence, word)}
               <span className="ml-2 text-xs text-zinc-400 dark:text-zinc-500">({cs.setting})</span>
               {i === 0 && (
                 <span className="ml-2 inline-block px-1.5 py-0.5 text-[10px] font-semibold rounded bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300">
