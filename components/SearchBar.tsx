@@ -2,43 +2,63 @@
 
 import { useState, useEffect, useRef, useTransition, useCallback } from 'react';
 import { searchTerms } from '@/actions/terms';
+import { searchVocabulary } from '@/actions/vocabulary';
 import { TermSearchResults } from '@/components/TermSearchResults';
-import type { Term } from '@/lib/db';
+import { VocabularySearchResults } from '@/components/VocabularySearchResults';
+import type { Term, VocabularyWord } from '@/lib/db';
+
+type Scope = 'term' | 'vocabulary';
 
 export function SearchBar() {
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<Term[] | null>(null);
+  const [scope, setScope] = useState<Scope>('term');
+  const [termResults, setTermResults] = useState<Term[] | null>(null);
+  const [vocabResults, setVocabResults] = useState<VocabularyWord[] | null>(null);
   const [isPending, startTransition] = useTransition();
   const containerRef = useRef<HTMLDivElement>(null);
   const refreshQueryRef = useRef<string>('');
+  const prevQueryRef = useRef<string>(query);
 
+  const results = scope === 'term' ? termResults : vocabResults;
   const overlayOpen = query.trim() !== '' && (results !== null || isPending);
 
   useEffect(() => {
     refreshQueryRef.current = '';
-  }, [query]);
+  }, [query, scope]);
 
   useEffect(() => {
     const trimmed = query.trim();
     if (!trimmed) return;
+    // A pure scope switch (query unchanged) should search immediately —
+    // only actual typing gets the 2s debounce, otherwise the dropdown
+    // (and the scope toggle inside it) briefly closes while nothing is
+    // pending yet.
+    const queryChanged = prevQueryRef.current !== query;
+    prevQueryRef.current = query;
     let stale = false;
     const timer = setTimeout(() => {
       startTransition(async () => {
-        const terms = await searchTerms(trimmed);
-        if (!stale) setResults(terms);
+        if (scope === 'term') {
+          const terms = await searchTerms(trimmed);
+          if (!stale) setTermResults(terms);
+        } else {
+          const words = await searchVocabulary(trimmed);
+          if (!stale) setVocabResults(words);
+        }
       });
-    }, 2000);
+    }, queryChanged ? 2000 : 0);
     return () => {
       stale = true;
       clearTimeout(timer);
     };
-  }, [query]);
+  }, [query, scope]);
 
   useEffect(() => {
     if (!overlayOpen) return;
     function handleClick(e: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setResults(null);
+        setTermResults(null);
+        setVocabResults(null);
       }
     }
     document.addEventListener('mousedown', handleClick);
@@ -47,7 +67,12 @@ export function SearchBar() {
 
   function handleClear() {
     setQuery('');
-    setResults(null);
+    setTermResults(null);
+    setVocabResults(null);
+  }
+
+  function handleScopeChange(next: Scope) {
+    setScope(next);
   }
 
   const refreshSearch = useCallback(() => {
@@ -56,7 +81,17 @@ export function SearchBar() {
     refreshQueryRef.current = trimmed;
     startTransition(async () => {
       const terms = await searchTerms(trimmed);
-      if (refreshQueryRef.current === trimmed) setResults(terms);
+      if (refreshQueryRef.current === trimmed) setTermResults(terms);
+    });
+  }, [query]);
+
+  const refreshVocabSearch = useCallback(() => {
+    const trimmed = query.trim();
+    if (!trimmed) return;
+    refreshQueryRef.current = trimmed;
+    startTransition(async () => {
+      const words = await searchVocabulary(trimmed);
+      if (refreshQueryRef.current === trimmed) setVocabResults(words);
     });
   }, [query]);
 
@@ -75,10 +110,10 @@ export function SearchBar() {
         )}
         <input
           type="text"
-          aria-label="Search terms"
+          aria-label={scope === 'term' ? 'Search terms' : 'Search vocabulary'}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search terms…"
+          placeholder={scope === 'term' ? 'Search terms…' : 'Search vocabulary…'}
           className="flex-1 bg-transparent text-sm text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 focus:outline-none min-w-0"
         />
         {query && (
@@ -98,11 +133,29 @@ export function SearchBar() {
 
       {overlayOpen && (
         <div className="absolute right-0 top-full mt-2 w-[min(600px,90vw)] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl z-50 overflow-hidden">
+          <div className="flex gap-1 px-4 pt-3">
+            {(['term', 'vocabulary'] as const).map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => handleScopeChange(s)}
+                className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                  scope === s
+                    ? 'bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900'
+                    : 'text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                }`}
+              >
+                {s === 'term' ? 'Terms' : 'Vocabulary'}
+              </button>
+            ))}
+          </div>
           <div className="max-h-[70vh] overflow-y-auto p-4">
             {isPending ? (
               <p className="text-sm text-zinc-500 dark:text-zinc-400">Searching…</p>
+            ) : scope === 'term' ? (
+              <TermSearchResults terms={termResults!} q={query} onTermExplained={refreshSearch} />
             ) : (
-              <TermSearchResults terms={results!} q={query} onTermExplained={refreshSearch} />
+              <VocabularySearchResults words={vocabResults!} q={query} onWordAdded={refreshVocabSearch} />
             )}
           </div>
         </div>
