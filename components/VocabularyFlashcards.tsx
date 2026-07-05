@@ -4,6 +4,7 @@ import { useState, useEffect, useTransition, useCallback } from 'react';
 import { getVocabularyReviewCards, submitVocabularyReview } from '@/actions/vocabulary';
 import { SRS_INTERVALS, type VocabularyWord } from '@/lib/db';
 import { VocabularyImage } from '@/components/VocabularyImage';
+import { VocabularyContextSentences } from '@/components/VocabularyContextSentences';
 
 export function VocabularyFlashcards() {
   const [filter, setFilter] = useState<'all' | 'word' | 'idiom'>('all');
@@ -31,6 +32,7 @@ export function VocabularyFlashcards() {
   }, [filter, loadCards]);
 
   const current = cards[currentIndex] ?? null;
+  const frontSentence = current?.context_sentences?.[0]?.sentence ?? current?.flashcard_sentence ?? '';
   const remainingCards = cards.slice(currentIndex);
   const dueCount = remainingCards.filter((c) => c.next_review !== null).length;
   const newCount = remainingCards.filter((c) => c.next_review === null).length;
@@ -111,9 +113,9 @@ export function VocabularyFlashcards() {
               <div className="p-6 sm:p-8 min-h-[160px] flex items-center justify-center">
                 <p className="text-base sm:text-lg text-zinc-700 dark:text-zinc-300 leading-8 text-center">
                   {!showBack ? (
-                    renderCloze(current.flashcard_sentence)
+                    renderCloze(frontSentence)
                   ) : (
-                    renderComplete(current.flashcard_sentence, current.word)
+                    renderComplete(frontSentence, current.word)
                   )}
                 </p>
               </div>
@@ -130,7 +132,11 @@ export function VocabularyFlashcards() {
                     </span>
                   </div>
                   <DetailSection title="Definition" content={current.definition} />
-                  <DetailSection title="Context" content={current.context} />
+                  <VocabularyContextSentences
+                    context={current.context}
+                    contextSentences={current.context_sentences}
+                    word={current.word}
+                  />
                   <DetailSection title="Connections" content={current.connections} />
                   <DetailSection title="Morphology" content={current.morphology} />
                   <VocabularyImage
