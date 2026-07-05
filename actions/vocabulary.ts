@@ -12,6 +12,8 @@ import {
   getNewVocabularyWords,
   reviewVocabularyWord,
   resetVocabularyReview,
+  setMainContextSentence,
+  fillBlank,
   getUserSettings,
   type VocabularyWord,
 } from '@/lib/db';
@@ -31,16 +33,18 @@ export async function addVocabularyWord(
   if (!user) throw new Error('Not authenticated');
 
   const analysis = await analyzeVocabulary(word, type);
+  const mainSentence = analysis.context_sentences[0];
 
   const entry = await insertVocabularyWord({
     user_id: user.id,
     word,
     type,
     definition: analysis.definition,
-    context: analysis.context,
+    context: fillBlank(mainSentence.sentence, word),
+    context_sentences: analysis.context_sentences,
     connections: analysis.connections,
     morphology: analysis.morphology,
-    flashcard_sentence: analysis.flashcard_sentence,
+    flashcard_sentence: null,
   });
 
   revalidatePath('/vocabulary');
@@ -82,6 +86,17 @@ export async function generateWordImage(
 
   revalidatePath('/vocabulary/flashcards');
   return { imageUrl, imageModel: model };
+}
+
+export async function setWordMainContext(
+  wordId: number,
+  index: number,
+): Promise<VocabularyWord> {
+  const user = await getCurrentUser();
+  if (!user) throw new Error('Not authenticated');
+  const entry = await setMainContextSentence(wordId, user.id, index);
+  revalidatePath('/vocabulary');
+  return entry;
 }
 
 export async function getVocabularyReviewCards(
