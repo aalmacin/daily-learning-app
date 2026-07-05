@@ -277,10 +277,9 @@ export async function explainTermWithAI(term: string, allowedCategories: string[
 
 export type VocabularyAnalysis = {
   definition: string;
-  context: string;
+  context_sentences: { sentence: string; setting: string }[];
   connections: string;
   morphology: string;
-  flashcard_sentence: string;
 };
 
 function buildVocabularyPrompt(type: 'word' | 'idiom'): string {
@@ -288,10 +287,9 @@ function buildVocabularyPrompt(type: 'word' | 'idiom'): string {
   return `You are a vocabulary learning assistant. Given a ${typeLabel}, respond with a JSON object with exactly these fields:
 
 - "definition": What the ${typeLabel} means AND what it does NOT mean (common misconceptions). 2-3 sentences.
-- "context": An example sentence that sounds like something a real person would actually say in everyday conversation — chatting with a coworker, a friend, or a stranger. Keep it casual, natural, and light; no need to be deep or literary. Pick a situation where using the ${typeLabel} genuinely fits so the usage feels natural, not forced.
+- "context_sentences": An array of exactly 5 objects, each with a "sentence" and a "setting" field. Each "sentence" must sound like something a real person would actually say in everyday conversation, with the ${typeLabel} itself replaced by the literal marker __blank__ (exactly once per sentence). Each "setting" is a short 2-4 word label describing where the sentence happens, and the 5 settings must be clearly different from each other (for example: "at work", "texting a friend", "family dinner", "formal email", "casual chat with a stranger"). Order the array with the single best, most natural sentence first — that one becomes the flashcard's main example sentence.
 - "connections": Connect the ${typeLabel} to a well-known person, event, character, or cultural reference to aid memory. For example, "Alfred the butler in Batman is a factotum — he does everything for Bruce Wayne." 1-2 sentences.
 - "morphology": The structural analysis — Latin or Greek roots, prefixes, suffixes, morphemes, etymology. Explain how the parts build the meaning. 1-3 sentences.
-- "flashcard_sentence": A sentence using the ${typeLabel} where the ${typeLabel} itself is replaced with a blank marker __blank__. Like the context field, it should sound like natural everyday speech someone would use at work or with friends. It must be different from the context sentence and provide enough clues for someone to guess the ${typeLabel}.
 
 Respond ONLY with valid JSON, no markdown or extra text.`;
 }
@@ -313,12 +311,24 @@ export async function analyzeVocabulary(
   if (!raw) throw new Error('Empty response from OpenAI');
 
   const parsed = JSON.parse(raw) as Partial<VocabularyAnalysis>;
+  const sentences = parsed.context_sentences;
+  const validSentences =
+    Array.isArray(sentences) &&
+    sentences.length === 5 &&
+    sentences.every(
+      (s) =>
+        typeof s === 'object' &&
+        s !== null &&
+        typeof (s as { sentence?: unknown }).sentence === 'string' &&
+        typeof (s as { setting?: unknown }).setting === 'string' &&
+        (s as { sentence: string }).sentence.split('__blank__').length === 2,
+    );
+
   if (
     typeof parsed.definition !== 'string' ||
-    typeof parsed.context !== 'string' ||
+    !validSentences ||
     typeof parsed.connections !== 'string' ||
-    typeof parsed.morphology !== 'string' ||
-    typeof parsed.flashcard_sentence !== 'string'
+    typeof parsed.morphology !== 'string'
   ) {
     throw new Error('Invalid response shape from OpenAI');
   }
