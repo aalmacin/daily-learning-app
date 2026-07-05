@@ -1,14 +1,11 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
-import { getVocabularyWords } from '@/lib/db';
 import { VocabularyFlashcards } from '@/components/VocabularyFlashcards';
 
 export default async function VocabularyFlashcardsPage() {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
-
-  const words = await getVocabularyWords(user.id);
 
   return (
     <div className="bg-zinc-50 dark:bg-black p-4 md:p-8 min-h-screen">
@@ -24,7 +21,7 @@ export default async function VocabularyFlashcardsPage() {
             Vocabulary
           </Link>
         </div>
-        <VocabularyFlashcards words={words} />
+        <VocabularyFlashcards />
       </div>
     </div>
   );

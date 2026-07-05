@@ -2,8 +2,10 @@
 
 import { useState } from 'react'
 import { useStore } from '@tanstack/react-store'
-import { vocabStore, dismissWord, removeWordFromStore, type VocabResult, type DoneVocabResult } from '@/store/vocabStore'
+import { vocabStore, dismissWord, removeWordFromStore, updateWordImageInStore, type VocabResult, type DoneVocabResult } from '@/store/vocabStore'
 import { removeVocabularyWord } from '@/actions/vocabulary'
+import { VocabularyImage } from '@/components/VocabularyImage'
+import { VocabularyContextSentences } from '@/components/VocabularyContextSentences'
 
 function DismissButton({ onDismiss }: { onDismiss: () => void }) {
   return (
@@ -69,6 +71,7 @@ function DoneVocabCard({ entry }: { entry: DoneVocabResult }) {
   const [isDeleting, setIsDeleting] = useState(false)
 
   const handleDelete = async () => {
+    if (!confirm('Delete this word?')) return;
     setIsDeleting(true)
     try {
       await removeVocabularyWord(entry.id)
@@ -92,9 +95,20 @@ function DoneVocabCard({ entry }: { entry: DoneVocabResult }) {
       {isExpanded && (
         <div className="px-4 pb-4 space-y-4 border-t border-zinc-100 dark:border-zinc-800">
           <Section title="Definition" content={entry.definition} />
-          <Section title="Context" content={entry.context} />
+          <VocabularyContextSentences
+            context={entry.context}
+            contextSentences={entry.context_sentences}
+            word={entry.word}
+          />
           <Section title="Connections" content={entry.connections} />
           <Section title="Morphology" content={entry.morphology} />
+          <VocabularyImage
+            wordId={entry.id}
+            word={entry.word}
+            imageUrl={entry.image_url}
+            imageModel={entry.image_model}
+            onGenerated={(imageUrl, imageModel) => updateWordImageInStore(entry.id, imageUrl, imageModel)}
+          />
           <div className="pt-2 flex items-center gap-3">
             <button
               onClick={handleDelete}

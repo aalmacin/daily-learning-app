@@ -1,45 +1,76 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import type { VocabularyWord } from '@/lib/db';
+import { useState, useEffect, useTransition, useCallback } from 'react';
+import { getVocabularyReviewCards, submitVocabularyReview } from '@/actions/vocabulary';
+import { SRS_INTERVALS, type VocabularyWord } from '@/lib/db';
+import { VocabularyImage } from '@/components/VocabularyImage';
+import { VocabularyContextSentences } from '@/components/VocabularyContextSentences';
 
-type Props = {
-  words: VocabularyWord[];
-};
-
-export function VocabularyFlashcards({ words }: Props) {
+export function VocabularyFlashcards() {
   const [filter, setFilter] = useState<'all' | 'word' | 'idiom'>('all');
+  const [cards, setCards] = useState<VocabularyWord[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showBack, setShowBack] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [isPending, startTransition] = useTransition();
 
-  const filtered = useMemo(() => {
-    const list = filter === 'all' ? words : words.filter((w) => w.type === filter);
-    return [...list].sort(() => Math.random() - 0.5);
-  }, [words, filter]);
-
-  const current = filtered[currentIndex] ?? null;
-
-  const handleNext = () => {
-    setShowBack(false);
-    if (currentIndex < filtered.length - 1) {
-      setCurrentIndex((i) => i + 1);
-    } else {
+  const loadCards = useCallback(async (type?: 'word' | 'idiom') => {
+    setLoading(true);
+    try {
+      const result = await getVocabularyReviewCards(type);
+      const shuffled = [...result.new].sort(() => Math.random() - 0.5);
+      setCards([...result.due, ...shuffled]);
       setCurrentIndex(0);
+      setShowBack(false);
+    } finally {
+      setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadCards(filter === 'all' ? undefined : filter);
+  }, [filter, loadCards]);
+
+  const current = cards[currentIndex] ?? null;
+  const frontSentence = current?.context_sentences?.[0]?.sentence ?? current?.flashcard_sentence ?? '';
+  const remainingCards = cards.slice(currentIndex);
+  const dueCount = remainingCards.filter((c) => c.next_review !== null).length;
+  const newCount = remainingCards.filter((c) => c.next_review === null).length;
+
+  const nextInterval = current
+    ? SRS_INTERVALS[Math.min(current.interval_step + 1, SRS_INTERVALS.length - 1)]
+    : null;
 
   const handleFilterChange = (newFilter: 'all' | 'word' | 'idiom') => {
     setFilter(newFilter);
-    setCurrentIndex(0);
-    setShowBack(false);
   };
 
-  if (words.length === 0) {
+  const handleShowBack = () => setShowBack(true);
+
+  const handleImageGenerated = (imageUrl: string, imageModel: string) => {
+    if (!current) return;
+    setCards((prev) =>
+      prev.map((c) => (c.id === current.id ? { ...c, image_url: imageUrl, image_model: imageModel } : c)),
+    );
+  };
+
+  const handleReview = (correct: boolean) => {
+    if (!current) return;
+    startTransition(async () => {
+      await submitVocabularyReview(current.id, correct);
+      setShowBack(false);
+      if (currentIndex < cards.length - 1) {
+        setCurrentIndex((i) => i + 1);
+      } else {
+        setCards([]);
+      }
+    });
+  };
+
+  if (loading) {
     return (
       <div className="min-h-[300px] flex items-center justify-center">
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">
-          No vocabulary words yet. Add some on the Vocabulary page first.
-        </p>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">Loading cards…</p>
       </div>
     );
   }
@@ -63,69 +94,97 @@ export function VocabularyFlashcards({ words }: Props) {
         ))}
       </div>
 
-      {filtered.length === 0 ? (
+      {cards.length === 0 ? (
         <div className="min-h-[200px] flex items-center justify-center">
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">
-            No {filter === 'word' ? 'words' : 'idioms'} available.
-          </p>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">All caught up!</p>
         </div>
       ) : (
-        <>
-          {/* Progress */}
-          <div className="flex justify-between text-xs text-zinc-400 dark:text-zinc-500">
-            <span>Card {currentIndex + 1} of {filtered.length}</span>
-            <span>{filter === 'all' ? 'All types' : filter === 'word' ? 'Words only' : 'Idioms only'}</span>
-          </div>
-
-          {/* Card */}
-          <div className="border border-zinc-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-950 overflow-hidden">
-            {/* Front */}
-            <div className="p-6 sm:p-8 min-h-[160px] flex items-center justify-center">
-              <p className="text-base sm:text-lg text-zinc-700 dark:text-zinc-300 leading-8 text-center">
-                {!showBack ? (
-                  renderCloze(current!.flashcard_sentence)
-                ) : (
-                  renderComplete(current!.flashcard_sentence, current!.word)
-                )}
-              </p>
+        current && (
+          <>
+            {/* Progress */}
+            <div className="flex justify-between text-xs text-zinc-400 dark:text-zinc-500">
+              <span>Card {currentIndex + 1} of {cards.length}</span>
+              <span>{dueCount} due / {newCount} new</span>
             </div>
 
-            {/* Back details */}
-            {showBack && current && (
-              <div className="border-t border-zinc-100 dark:border-zinc-800 px-6 sm:px-8 pb-6 space-y-4">
-                <div className="pt-4 text-center">
-                  <span className="inline-block px-3 py-1 text-sm font-semibold rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300">
-                    {current.word}
-                  </span>
-                  <span className="ml-2 text-xs text-zinc-400 dark:text-zinc-500">
-                    {current.type}
-                  </span>
+            {/* Card */}
+            <div className="border border-zinc-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-950 overflow-hidden">
+              {/* Front */}
+              <div className="p-6 sm:p-8 min-h-[160px] flex items-center justify-center">
+                <p className="text-base sm:text-lg text-zinc-700 dark:text-zinc-300 leading-8 text-center">
+                  {!showBack ? (
+                    renderCloze(frontSentence)
+                  ) : (
+                    renderComplete(frontSentence, current.word)
+                  )}
+                </p>
+              </div>
+
+              {/* Back details */}
+              {showBack && (
+                <div className="border-t border-zinc-100 dark:border-zinc-800 px-6 sm:px-8 pb-6 space-y-4">
+                  <div className="pt-4 text-center">
+                    <span className="inline-block px-3 py-1 text-sm font-semibold rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300">
+                      {current.word}
+                    </span>
+                    <span className="ml-2 text-xs text-zinc-400 dark:text-zinc-500">
+                      {current.type}
+                    </span>
+                  </div>
+                  <DetailSection title="Definition" content={current.definition} />
+                  <VocabularyContextSentences
+                    context={current.context}
+                    contextSentences={current.context_sentences}
+                    word={current.word}
+                  />
+                  <DetailSection title="Connections" content={current.connections} />
+                  <DetailSection title="Morphology" content={current.morphology} />
+                  <VocabularyImage
+                    key={current.id}
+                    wordId={current.id}
+                    word={current.word}
+                    imageUrl={current.image_url}
+                    imageModel={current.image_model}
+                    onGenerated={handleImageGenerated}
+                  />
                 </div>
-                <DetailSection title="Definition" content={current.definition} />
-                <DetailSection title="Context" content={current.context} />
-                <DetailSection title="Connections" content={current.connections} />
-                <DetailSection title="Morphology" content={current.morphology} />
+              )}
+            </div>
+
+            {/* Actions */}
+            {!showBack ? (
+              <button
+                onClick={handleShowBack}
+                className="w-full py-3 text-sm sm:text-base font-medium rounded-lg bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 hover:bg-zinc-700 dark:hover:bg-zinc-200 transition-colors"
+              >
+                Show Answer
+              </button>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => handleReview(false)}
+                    disabled={isPending}
+                    className="flex-1 py-3 text-sm sm:text-base font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-40 transition-colors"
+                  >
+                    Incorrect
+                  </button>
+                  <button
+                    onClick={() => handleReview(true)}
+                    disabled={isPending}
+                    className="flex-1 py-3 text-sm sm:text-base font-medium rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:opacity-40 transition-colors"
+                  >
+                    Correct
+                  </button>
+                </div>
+                <div className="flex justify-center gap-6 text-xs text-zinc-400 dark:text-zinc-500">
+                  <span>Incorrect: 1 day</span>
+                  <span>Correct: {nextInterval} days</span>
+                </div>
               </div>
             )}
-          </div>
-
-          {/* Actions */}
-          {!showBack ? (
-            <button
-              onClick={() => setShowBack(true)}
-              className="w-full py-3 text-sm sm:text-base font-medium rounded-lg bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 hover:bg-zinc-700 dark:hover:bg-zinc-200 transition-colors"
-            >
-              Show Answer
-            </button>
-          ) : (
-            <button
-              onClick={handleNext}
-              className="w-full py-3 text-sm sm:text-base font-medium rounded-lg bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 hover:bg-zinc-700 dark:hover:bg-zinc-200 transition-colors"
-            >
-              {currentIndex < filtered.length - 1 ? 'Next Card' : 'Start Over'}
-            </button>
-          )}
-        </>
+          </>
+        )
       )}
     </div>
   );
