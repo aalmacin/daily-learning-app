@@ -5,6 +5,11 @@ import { addFlashcard, editFlashcard, removeFlashcard, resetFlashcard } from '@/
 import { hasClozeMarkers } from '@/lib/cloze';
 import { SRS_INTERVALS, type Flashcard } from '@/lib/db';
 
+const MONTH_NAMES = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+];
+
 type Props = {
   termId: number;
   formattedNote: string;
@@ -81,7 +86,8 @@ export function FlashcardSection({ termId, formattedNote, initialFlashcards }: P
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return null;
-    return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const [, month, day] = dateStr.slice(0, 10).split('-').map(Number);
+    return `${MONTH_NAMES[month - 1]} ${day}`;
   };
 
   return (
