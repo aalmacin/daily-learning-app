@@ -1,9 +1,15 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { removeVocabularyWord, resetVocabularyReviewAction } from '@/actions/vocabulary';
+import { removeVocabularyWord, resetVocabularyReviewAction, setWordMainContext } from '@/actions/vocabulary';
 import { SRS_INTERVALS, type VocabularyWord } from '@/lib/db';
 import { VocabularyImage } from '@/components/VocabularyImage';
+import { VocabularyContextSentences } from '@/components/VocabularyContextSentences';
+
+const MONTH_NAMES = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+];
 
 type Props = {
   initialWords: VocabularyWord[];
@@ -18,6 +24,7 @@ export function VocabularyList({ initialWords }: Props) {
   const filtered = words.filter((w) => w.type === activeTab);
 
   const handleDelete = (id: number) => {
+    if (!confirm('Delete this word?')) return;
     startTransition(async () => {
       await removeVocabularyWord(id);
       setWords((prev) => prev.filter((w) => w.id !== id));
@@ -32,9 +39,17 @@ export function VocabularyList({ initialWords }: Props) {
     });
   };
 
+  const handleSetMain = (id: number, index: number) => {
+    startTransition(async () => {
+      const updated = await setWordMainContext(id, index);
+      setWords((prev) => prev.map((w) => (w.id === id ? updated : w)));
+    });
+  };
+
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return null;
-    return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const [, month, day] = dateStr.slice(0, 10).split('-').map(Number);
+    return `${MONTH_NAMES[month - 1]} ${day}`;
   };
 
   return (
@@ -91,7 +106,12 @@ export function VocabularyList({ initialWords }: Props) {
                 {isExpanded && (
                   <div className="px-4 pb-4 space-y-4 border-t border-zinc-100 dark:border-zinc-800">
                     <Section title="Definition" content={w.definition} />
-                    <Section title="Context" content={w.context} />
+                    <VocabularyContextSentences
+                      context={w.context}
+                      contextSentences={w.context_sentences}
+                      word={w.word}
+                      onSetMain={(index) => handleSetMain(w.id, index)}
+                    />
                     <Section title="Connections" content={w.connections} />
                     <Section title="Morphology" content={w.morphology} />
                     <VocabularyImage
