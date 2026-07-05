@@ -1342,6 +1342,18 @@ export type VocabularyWord = {
   updated_at: string;
 };
 
+export async function searchVocabularyWords(userId: string, q: string): Promise<VocabularyWord[]> {
+  const { data, error } = await getSupabase()
+    .from('vocabulary_words')
+    .select('*')
+    .eq('user_id', userId)
+    .ilike('word', `%${q}%`)
+    .order('created_at', { ascending: false })
+    .limit(20);
+  if (error) throw error;
+  return data as VocabularyWord[];
+}
+
 export async function getVocabularyWords(userId: string, type?: 'word' | 'idiom'): Promise<VocabularyWord[]> {
   let query = getSupabase()
     .from('vocabulary_words')
@@ -1529,6 +1541,28 @@ export async function setMainContextSentence(
       context: newContext,
       context_sentences: reordered,
     } as unknown as never)
+    .eq('id', wordId)
+    .eq('user_id', userId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as VocabularyWord;
+}
+
+export async function updateVocabularyAnalysis(
+  wordId: number,
+  userId: string,
+  analysis: {
+    definition: string;
+    context: string;
+    context_sentences: ContextSentence[];
+    connections: string;
+    morphology: string;
+  },
+): Promise<VocabularyWord> {
+  const { data, error } = await getSupabase()
+    .from('vocabulary_words')
+    .update(analysis as unknown as never)
     .eq('id', wordId)
     .eq('user_id', userId)
     .select()

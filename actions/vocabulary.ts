@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import {
   getVocabularyWords,
+  searchVocabularyWords,
   getVocabularyWordById,
   insertVocabularyWord,
   deleteVocabularyWord,
@@ -13,6 +14,7 @@ import {
   reviewVocabularyWord,
   resetVocabularyReview,
   setMainContextSentence,
+  updateVocabularyAnalysis,
   fillBlank,
   getUserSettings,
   type VocabularyWord,
@@ -22,7 +24,7 @@ import {
   buildImagePrompt,
   generateVocabularyImage,
 } from '@/lib/openai';
-import { isValidImageModel } from '@/lib/imageModels';
+import { isValidImageModel, DEFAULT_IMAGE_MODEL } from '@/lib/imageModels';
 import { getCurrentUser } from '@/lib/auth';
 
 export async function addVocabularyWord(
@@ -66,6 +68,12 @@ export async function fetchVocabularyWords(
   return getVocabularyWords(user.id, type);
 }
 
+export async function searchVocabulary(q: string): Promise<VocabularyWord[]> {
+  const user = await getCurrentUser();
+  if (!user) throw new Error('Not authenticated');
+  return searchVocabularyWords(user.id, q);
+}
+
 export async function generateWordImage(
   wordId: number,
   model: string,
@@ -86,6 +94,41 @@ export async function generateWordImage(
 
   revalidatePath('/vocabulary/flashcards');
   return { imageUrl, imageModel: model };
+}
+
+export async function regenerateVocabularyWord(wordId: number): Promise<VocabularyWord> {
+  const user = await getCurrentUser();
+  if (!user) throw new Error('Not authenticated');
+
+  const word = await getVocabularyWordById(wordId, user.id);
+  if (!word) throw new Error('Word not found');
+
+  const analysis = await analyzeVocabulary(word.word, word.type);
+  const mainSentence = analysis.context_sentences[0];
+  const context = fillBlank(mainSentence.sentence, word.word);
+
+  let entry = await updateVocabularyAnalysis(wordId, user.id, {
+    definition: analysis.definition,
+    context,
+    context_sentences: analysis.context_sentences,
+    connections: analysis.connections,
+    morphology: analysis.morphology,
+  });
+
+  // Only refresh the image if one was already generated — image generation stays opt-in.
+  if (word.image_url) {
+    const imageModel = word.image_model ?? DEFAULT_IMAGE_MODEL;
+    const prompt = await buildImagePrompt(word.word, context, analysis.definition);
+    const bytes = await generateVocabularyImage(prompt, imageModel);
+    const publicUrl = await uploadVocabularyImage(user.id, wordId, bytes);
+    const imageUrl = `${publicUrl}?v=${Date.now()}`;
+    await updateVocabularyImage(wordId, user.id, imageUrl, prompt, imageModel);
+    entry = { ...entry, image_url: imageUrl, image_prompt: prompt, image_model: imageModel };
+  }
+
+  revalidatePath('/vocabulary');
+  revalidatePath('/vocabulary/flashcards');
+  return entry;
 }
 
 export async function setWordMainContext(
