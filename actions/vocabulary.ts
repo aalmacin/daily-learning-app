@@ -15,14 +15,22 @@ import {
   resetVocabularyReview,
   setMainContextSentence,
   updateVocabularyAnalysis,
+  getVocabularyChatMessages,
+  insertVocabularyChatMessages,
+  getVocabularySentenceAttempts,
+  insertVocabularySentenceAttempt,
   fillBlank,
   getUserSettings,
   type VocabularyWord,
+  type VocabularyChatMessage,
+  type VocabularySentenceAttempt,
 } from '@/lib/db';
 import {
   analyzeVocabulary,
   buildImagePrompt,
   generateVocabularyImage,
+  chatAboutVocabulary,
+  evaluateVocabularySentence,
 } from '@/lib/openai';
 import { isValidImageModel, DEFAULT_IMAGE_MODEL } from '@/lib/imageModels';
 import { getCurrentUser } from '@/lib/auth';
@@ -140,6 +148,64 @@ export async function setWordMainContext(
   const entry = await setMainContextSentence(wordId, user.id, index);
   revalidatePath('/vocabulary');
   return entry;
+}
+
+export async function getVocabularyChat(wordId: number): Promise<VocabularyChatMessage[]> {
+  const user = await getCurrentUser();
+  if (!user) throw new Error('Not authenticated');
+  const word = await getVocabularyWordById(wordId, user.id);
+  if (!word) throw new Error('Word not found');
+  return getVocabularyChatMessages(wordId);
+}
+
+export async function askVocabularyQuestion(
+  wordId: number,
+  question: string,
+): Promise<VocabularyChatMessage[]> {
+  const user = await getCurrentUser();
+  if (!user) throw new Error('Not authenticated');
+  const word = await getVocabularyWordById(wordId, user.id);
+  if (!word) throw new Error('Word not found');
+
+  const history = await getVocabularyChatMessages(wordId);
+  const answer = await chatAboutVocabulary(
+    word.word,
+    word.type,
+    word.definition,
+    history.map((m) => ({ role: m.role, content: m.content })),
+    question,
+  );
+  await insertVocabularyChatMessages(wordId, [
+    { role: 'user', content: question },
+    { role: 'assistant', content: answer },
+  ]);
+  return getVocabularyChatMessages(wordId);
+}
+
+export async function getVocabularySentenceHistory(wordId: number): Promise<VocabularySentenceAttempt[]> {
+  const user = await getCurrentUser();
+  if (!user) throw new Error('Not authenticated');
+  const word = await getVocabularyWordById(wordId, user.id);
+  if (!word) throw new Error('Word not found');
+  return getVocabularySentenceAttempts(wordId);
+}
+
+export async function submitVocabularySentenceAttemptAction(
+  wordId: number,
+  sentence: string,
+): Promise<VocabularySentenceAttempt> {
+  const user = await getCurrentUser();
+  if (!user) throw new Error('Not authenticated');
+  const word = await getVocabularyWordById(wordId, user.id);
+  if (!word) throw new Error('Word not found');
+
+  const { isCorrect, feedback } = await evaluateVocabularySentence(
+    word.word,
+    word.type,
+    word.definition,
+    sentence,
+  );
+  return insertVocabularySentenceAttempt(wordId, sentence, isCorrect, feedback);
 }
 
 export async function getVocabularyReviewCards(
