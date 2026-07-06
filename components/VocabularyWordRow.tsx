@@ -5,6 +5,7 @@ import { removeVocabularyWord, resetVocabularyReviewAction, setWordMainContext, 
 import { SRS_INTERVALS, type VocabularyWord } from '@/lib/db';
 import { VocabularyImage } from '@/components/VocabularyImage';
 import { VocabularyContextSentences } from '@/components/VocabularyContextSentences';
+import { VocabularyAssistant } from '@/components/VocabularyAssistant';
 
 const MONTH_NAMES = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
@@ -93,6 +94,7 @@ export function VocabularyWordRow({ word: w, isExpanded, onToggleExpand, onUpdat
             imageModel={w.image_model}
             onGenerated={(imageUrl, imageModel) => onUpdated({ ...w, image_url: imageUrl, image_model: imageModel })}
           />
+          <VocabularyAssistant wordId={w.id} word={w.word} />
           <div className="pt-2 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
             <div className="flex flex-wrap gap-2 text-xs text-zinc-400 dark:text-zinc-500">
               {w.next_review ? (
