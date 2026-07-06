@@ -336,6 +336,73 @@ export async function analyzeVocabulary(
   return parsed as VocabularyAnalysis;
 }
 
+const VOCABULARY_CHAT_SYSTEM_PROMPT = (word: string, type: 'word' | 'idiom', definition: string) => {
+  const typeLabel = type === 'word' ? 'word' : 'idiom/phrase';
+  return `You are a vocabulary tutor helping the user understand the ${typeLabel} "${word}".
+Definition: ${definition}
+Answer only questions about this ${typeLabel}'s meaning, usage, origin, or related words. Be concise: respond in plain prose, no markdown, no bullet points. Maximum 2 short paragraphs.`;
+};
+
+export async function chatAboutVocabulary(
+  word: string,
+  type: 'word' | 'idiom',
+  definition: string,
+  history: Array<{ role: 'user' | 'assistant'; content: string }>,
+  question: string,
+): Promise<string> {
+  const response = await client.chat.completions.create({
+    model: 'gpt-5.4-mini',
+    messages: [
+      { role: 'system', content: VOCABULARY_CHAT_SYSTEM_PROMPT(word, type, definition) },
+      ...history,
+      { role: 'user', content: question },
+    ],
+  });
+
+  const answer = response.choices[0]?.message?.content;
+  if (!answer) throw new Error('Empty response from OpenAI');
+  return answer;
+}
+
+function buildSentenceEvaluationPrompt(type: 'word' | 'idiom'): string {
+  const typeLabel = type === 'word' ? 'word' : 'idiom/phrase';
+  return `You are a vocabulary tutor. Given a ${typeLabel}, its definition, and a sentence a learner wrote attempting to use it, judge whether the ${typeLabel} is used correctly and naturally. Respond with a JSON object with exactly these fields:
+
+- "is_correct": true if the ${typeLabel} is used correctly and naturally in the sentence, false otherwise.
+- "feedback": 1-2 sentences. If correct, briefly say why it works. If incorrect or awkward, briefly explain why and give a corrected example sentence.
+
+Respond ONLY with valid JSON, no markdown or extra text.`;
+}
+
+export async function evaluateVocabularySentence(
+  word: string,
+  type: 'word' | 'idiom',
+  definition: string,
+  sentence: string,
+): Promise<{ isCorrect: boolean; feedback: string }> {
+  const response = await client.chat.completions.create({
+    model: 'gpt-5.4-mini',
+    messages: [
+      { role: 'system', content: buildSentenceEvaluationPrompt(type) },
+      {
+        role: 'user',
+        content: `${type === 'word' ? 'Word' : 'Idiom'}: ${word}\nDefinition: ${definition}\nSentence: ${sentence}`,
+      },
+    ],
+    response_format: { type: 'json_object' },
+  });
+
+  const raw = response.choices[0]?.message?.content;
+  if (!raw) throw new Error('Empty response from OpenAI');
+
+  const parsed = JSON.parse(raw) as Partial<{ is_correct: unknown; feedback: unknown }>;
+  if (typeof parsed.is_correct !== 'boolean' || typeof parsed.feedback !== 'string') {
+    throw new Error('Invalid response shape from OpenAI');
+  }
+
+  return { isCorrect: parsed.is_correct, feedback: parsed.feedback };
+}
+
 export async function buildImagePrompt(
   word: string,
   context: string,
