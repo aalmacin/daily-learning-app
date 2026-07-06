@@ -1571,6 +1571,71 @@ export async function updateVocabularyAnalysis(
   return data as VocabularyWord;
 }
 
+export type VocabularyChatMessage = {
+  id: number;
+  word_id: number;
+  role: 'user' | 'assistant';
+  content: string;
+  created_at: string;
+};
+
+export type VocabularySentenceAttempt = {
+  id: number;
+  word_id: number;
+  sentence: string;
+  is_correct: boolean;
+  feedback: string;
+  created_at: string;
+};
+
+export async function getVocabularyChatMessages(wordId: number): Promise<VocabularyChatMessage[]> {
+  const { data, error } = await getSupabase()
+    .from('vocabulary_chats')
+    .select('*')
+    .eq('word_id', wordId)
+    .order('id', { ascending: true });
+  if (error) throw error;
+  return data as VocabularyChatMessage[];
+}
+
+export async function insertVocabularyChatMessages(
+  wordId: number,
+  messages: Array<{ role: 'user' | 'assistant'; content: string }>,
+): Promise<VocabularyChatMessage[]> {
+  const rows = messages.map((m) => ({ word_id: wordId, role: m.role, content: m.content }));
+  const { data, error } = await getSupabase()
+    .from('vocabulary_chats')
+    .insert(rows as unknown as never)
+    .select();
+  if (error) throw error;
+  return data as VocabularyChatMessage[];
+}
+
+export async function getVocabularySentenceAttempts(wordId: number): Promise<VocabularySentenceAttempt[]> {
+  const { data, error } = await getSupabase()
+    .from('vocabulary_sentence_attempts')
+    .select('*')
+    .eq('word_id', wordId)
+    .order('id', { ascending: true });
+  if (error) throw error;
+  return data as VocabularySentenceAttempt[];
+}
+
+export async function insertVocabularySentenceAttempt(
+  wordId: number,
+  sentence: string,
+  isCorrect: boolean,
+  feedback: string,
+): Promise<VocabularySentenceAttempt> {
+  const { data, error } = await getSupabase()
+    .from('vocabulary_sentence_attempts')
+    .insert({ word_id: wordId, sentence, is_correct: isCorrect, feedback } as unknown as never)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as VocabularySentenceAttempt;
+}
+
 export async function getTermsByCategory(userId: string, categoryId: number): Promise<CategoryTerm[]> {
   const { data: cat, error: catError } = await getSupabase()
     .from('categories')
