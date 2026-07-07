@@ -22,6 +22,9 @@ export function VocabularyChatPanel({ wordId, word }: Props) {
       .then((result) => {
         if (!cancelled) setMessages(result);
       })
+      .catch((err) => {
+        if (!cancelled) setError(err instanceof Error ? err.message : 'Something went wrong');
+      })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });

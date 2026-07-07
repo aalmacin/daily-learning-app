@@ -22,6 +22,9 @@ export function VocabularySentencePracticePanel({ wordId, word }: Props) {
       .then((result) => {
         if (!cancelled) setAttempts(result);
       })
+      .catch((err) => {
+        if (!cancelled) setError(err instanceof Error ? err.message : 'Something went wrong');
+      })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
