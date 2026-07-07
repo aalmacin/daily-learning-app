@@ -276,6 +276,8 @@ export async function explainTermWithAI(term: string, allowedCategories: string[
 }
 
 export type VocabularyAnalysis = {
+  corrected: string;
+  recognized: boolean;
   definition: string;
   context_sentences: { sentence: string; setting: string }[];
   connections: string;
@@ -284,8 +286,10 @@ export type VocabularyAnalysis = {
 
 function buildVocabularyPrompt(type: 'word' | 'idiom'): string {
   const typeLabel = type === 'word' ? 'word' : 'idiom/phrase';
-  return `You are a vocabulary learning assistant. Given a ${typeLabel}, respond with a JSON object with exactly these fields:
+  return `You are a vocabulary learning assistant. Given a ${typeLabel} that may contain typos or non-standard wording, respond with a JSON object with exactly these fields:
 
+- "corrected": The properly spelled ${typeLabel} (for a word: fix spelling typos to the real word; for an idiom: normalize to the standard, commonly recognized wording). If the input is already correct, return it unchanged.
+- "recognized": true if you can confidently identify a real, well-known ${typeLabel} from the input; false if the input is too mangled, nonsensical, or unrecognizable to identify one. If false, still fill in the other fields with your best effort.
 - "definition": What the ${typeLabel} means AND what it does NOT mean (common misconceptions). 2-3 sentences.
 - "context_sentences": An array of exactly 5 objects, each with a "sentence" and a "setting" field. Each "sentence" must sound like something a real person would actually say in everyday conversation, with the ${typeLabel} itself replaced by the literal marker __blank__ (exactly once per sentence). Each "setting" is a short 2-4 word label describing where the sentence happens, and the 5 settings must be clearly different from each other (for example: "at work", "texting a friend", "family dinner", "formal email", "casual chat with a stranger"). Order the array with the single best, most natural sentence first — that one becomes the flashcard's main example sentence.
 - "connections": Connect the ${typeLabel} to a well-known person, event, character, or cultural reference to aid memory. For example, "Alfred the butler in Batman is a factotum — he does everything for Bruce Wayne." 1-2 sentences.
@@ -325,6 +329,9 @@ export async function analyzeVocabulary(
     );
 
   if (
+    typeof parsed.corrected !== 'string' ||
+    parsed.corrected.trim().length === 0 ||
+    typeof parsed.recognized !== 'boolean' ||
     typeof parsed.definition !== 'string' ||
     !validSentences ||
     typeof parsed.connections !== 'string' ||
