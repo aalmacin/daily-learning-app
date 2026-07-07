@@ -5,6 +5,7 @@ import { getVocabularyReviewCards, submitVocabularyReview } from '@/actions/voca
 import { SRS_INTERVALS, type VocabularyWord } from '@/lib/db';
 import { VocabularyImage } from '@/components/VocabularyImage';
 import { VocabularyContextSentences } from '@/components/VocabularyContextSentences';
+import { VocabularyAssistant } from '@/components/VocabularyAssistant';
 
 export function VocabularyFlashcards() {
   const [filter, setFilter] = useState<'all' | 'word' | 'idiom'>('all');
@@ -147,6 +148,7 @@ export function VocabularyFlashcards() {
                     imageModel={current.image_model}
                     onGenerated={handleImageGenerated}
                   />
+                  <VocabularyAssistant key={current.id} wordId={current.id} word={current.word} />
                 </div>
               )}
             </div>
