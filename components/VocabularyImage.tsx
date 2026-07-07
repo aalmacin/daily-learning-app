@@ -42,7 +42,12 @@ export function VocabularyImage({ wordId, word, imageUrl, imageModel, onGenerate
         <img
           src={imageUrl}
           alt={`Illustration for ${word}`}
-          className="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 mb-3"
+          width={1024}
+          height={1024}
+          // aspect-square pins the box ratio so iOS Safari can't mis-resolve the
+          // intrinsic height (it was rendering generated 1024x1024 images at half
+          // height); object-contain keeps any non-square image undistorted.
+          className="w-full aspect-square object-contain rounded-lg border border-zinc-200 dark:border-zinc-700 mb-3"
         />
       )}
 
