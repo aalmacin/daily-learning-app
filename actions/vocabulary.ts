@@ -35,14 +35,19 @@ export async function addVocabularyWord(
   if (!user) throw new Error('Not authenticated');
 
   const analysis = await analyzeVocabulary(word, type);
+  if (!analysis.recognized) {
+    throw new Error(`Could not recognize a valid ${type} from "${word}"`);
+  }
+
+  const correctedWord = analysis.corrected;
   const mainSentence = analysis.context_sentences[0];
 
   const entry = await insertVocabularyWord({
     user_id: user.id,
-    word,
+    word: correctedWord,
     type,
     definition: analysis.definition,
-    context: fillBlank(mainSentence.sentence, word),
+    context: fillBlank(mainSentence.sentence, correctedWord),
     context_sentences: analysis.context_sentences,
     connections: analysis.connections,
     morphology: analysis.morphology,
