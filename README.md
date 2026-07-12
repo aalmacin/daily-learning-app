@@ -6,12 +6,6 @@ First, run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open the URL defined by `NEXT_PUBLIC_APP_URL` in `.env.local` with your browser to see the result.
