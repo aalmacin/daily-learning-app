@@ -1,12 +1,66 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useStore } from '@tanstack/react-store';
 import { VocabularyWordRow } from '@/components/VocabularyWordRow';
+import {
+  vocabStore,
+  dismissWord,
+  type DoneVocabResult,
+  type PendingVocabResult,
+  type ErrorVocabResult,
+} from '@/store/vocabStore';
 import type { VocabularyWord } from '@/lib/db';
 
 type Props = {
   initialWords: VocabularyWord[];
 };
+
+function DismissButton({ onDismiss }: { onDismiss: () => void }) {
+  return (
+    <button
+      onClick={onDismiss}
+      aria-label="Dismiss"
+      className="ml-auto shrink-0 rounded p-1 text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <line x1="18" y1="6" x2="6" y2="18" />
+        <line x1="6" y1="6" x2="18" y2="18" />
+      </svg>
+    </button>
+  );
+}
+
+function PendingRow({ entry }: { entry: PendingVocabResult }) {
+  return (
+    <div className="border border-zinc-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-950 px-4 py-3 flex items-center gap-3">
+      <svg
+        className="animate-spin h-4 w-4 text-zinc-400 dark:text-zinc-500 shrink-0"
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+      >
+        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+      </svg>
+      <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">{entry.word}</span>
+      <span className="text-sm text-zinc-400 dark:text-zinc-500">Analyzing…</span>
+      <DismissButton onDismiss={() => dismissWord(entry.key)} />
+    </div>
+  );
+}
+
+function ErrorRow({ entry }: { entry: ErrorVocabResult }) {
+  return (
+    <div className="border border-red-200 dark:border-red-900 rounded-xl bg-white dark:bg-zinc-950 px-4 py-3 flex flex-col gap-2">
+      <div className="flex items-center">
+        <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">{entry.word}</span>
+        <DismissButton onDismiss={() => dismissWord(entry.key)} />
+      </div>
+      <p className="text-sm text-red-600 dark:text-red-400">{entry.error}</p>
+    </div>
+  );
+}
 
 export function VocabularyList({ initialWords }: Props) {
   const [words, setWords] = useState(initialWords);
@@ -14,11 +68,33 @@ export function VocabularyList({ initialWords }: Props) {
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
   const [query, setQuery] = useState('');
 
+  const activeWords = useStore(vocabStore, (s) => s.activeWords);
+
+  // Merge newly-completed store entries into the persisted list, then drop them from the store.
+  useEffect(() => {
+    const doneEntries = activeWords.filter((w): w is DoneVocabResult => w.status === 'done');
+    if (doneEntries.length === 0) return;
+
+    setWords((prev) => {
+      const existingIds = new Set(prev.map((w) => w.id));
+      const newOnes = doneEntries.filter((w) => !existingIds.has(w.id));
+      if (newOnes.length === 0) return prev;
+      return [...newOnes, ...prev];
+    });
+
+    doneEntries.forEach((entry) => dismissWord(entry.key));
+  }, [activeWords]);
+
   const trimmedQuery = query.trim();
   const filtered = words.filter(
     (w) =>
       w.type === activeTab &&
       (trimmedQuery === '' || w.word.toLowerCase().includes(trimmedQuery.toLowerCase())),
+  );
+  // Pending/error rows aren't search-filtered: hiding a word the user just added because
+  // it doesn't match an unrelated search query would be confusing.
+  const pendingForTab = activeWords.filter(
+    (w): w is PendingVocabResult | ErrorVocabResult => w.status !== 'done' && w.type === activeTab
   );
 
   const toggleExpanded = (id: number) => {
@@ -85,7 +161,7 @@ export function VocabularyList({ initialWords }: Props) {
       </div>
 
       {/* Word list */}
-      {filtered.length === 0 ? (
+      {filtered.length === 0 && pendingForTab.length === 0 ? (
         <p className="text-sm text-zinc-400 dark:text-zinc-500 text-center py-8">
           {trimmedQuery
             ? `No ${activeTab === 'word' ? 'word' : 'idiom'}s match "${trimmedQuery}".`
@@ -93,6 +169,13 @@ export function VocabularyList({ initialWords }: Props) {
         </p>
       ) : (
         <div className="space-y-2">
+          {pendingForTab.map((entry) =>
+            entry.status === 'processing' ? (
+              <PendingRow key={entry.key} entry={entry} />
+            ) : (
+              <ErrorRow key={entry.key} entry={entry} />
+            )
+          )}
           {filtered.map((w) => (
             <VocabularyWordRow
               key={w.id}

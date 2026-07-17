@@ -4,7 +4,6 @@ import { getCurrentUser } from '@/lib/auth';
 import { getVocabularyWords } from '@/lib/db';
 import { VocabularyList } from '@/components/VocabularyList';
 import { VocabularyForm } from '@/components/VocabularyForm';
-import { VocabularyResult } from '@/components/VocabularyResult';
 
 export default async function VocabularyPage() {
   const user = await getCurrentUser();
@@ -27,7 +26,6 @@ export default async function VocabularyPage() {
           </Link>
         </div>
         <VocabularyForm />
-        <VocabularyResult />
         <VocabularyList initialWords={words} />
       </div>
     </div>
