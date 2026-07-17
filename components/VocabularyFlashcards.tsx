@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect, useTransition, useCallback } from 'react';
-import { getVocabularyReviewCards, submitVocabularyReview } from '@/actions/vocabulary';
+import { getVocabularyReviewCards, submitVocabularyReview, setWordMainContext } from '@/actions/vocabulary';
 import { SRS_INTERVALS, type VocabularyWord } from '@/lib/db';
 import { VocabularyImage } from '@/components/VocabularyImage';
 import { VocabularyContextSentences } from '@/components/VocabularyContextSentences';
 import { VocabularyAssistant } from '@/components/VocabularyAssistant';
+import { getFlashcardClue } from '@/lib/vocabulary-clue';
 
 export function VocabularyFlashcards() {
   const [filter, setFilter] = useState<'all' | 'word' | 'idiom'>('all');
@@ -34,6 +35,7 @@ export function VocabularyFlashcards() {
 
   const current = cards[currentIndex] ?? null;
   const frontSentence = current?.context_sentences?.[0]?.sentence ?? current?.flashcard_sentence ?? '';
+  const clue = current ? getFlashcardClue(current.word, current.definition) : '';
   const remainingCards = cards.slice(currentIndex);
   const dueCount = remainingCards.filter((c) => c.next_review !== null).length;
   const newCount = remainingCards.filter((c) => c.next_review === null).length;
@@ -53,6 +55,14 @@ export function VocabularyFlashcards() {
     setCards((prev) =>
       prev.map((c) => (c.id === current.id ? { ...c, image_url: imageUrl, image_model: imageModel } : c)),
     );
+  };
+
+  const handleSetMain = (index: number) => {
+    if (!current) return;
+    startTransition(async () => {
+      const updated = await setWordMainContext(current.id, index);
+      setCards((prev) => prev.map((c) => (c.id === current.id ? updated : c)));
+    });
   };
 
   const handleReview = (correct: boolean) => {
@@ -111,7 +121,13 @@ export function VocabularyFlashcards() {
             {/* Card */}
             <div className="border border-zinc-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-950 overflow-hidden">
               {/* Front */}
-              <div className="p-6 sm:p-8 min-h-[160px] flex items-center justify-center">
+              <div className="p-6 sm:p-8 min-h-[160px] flex flex-col items-center justify-center">
+                {/* Type pill */}
+                <div className="mb-4">
+                  <span className="inline-block px-3 py-1 text-xs font-medium rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
+                    {current.type === 'word' ? 'Word' : 'Idiom'}
+                  </span>
+                </div>
                 <p className="text-base sm:text-lg text-zinc-700 dark:text-zinc-300 leading-8 text-center">
                   {!showBack ? (
                     renderCloze(frontSentence)
@@ -119,6 +135,21 @@ export function VocabularyFlashcards() {
                     renderComplete(frontSentence, current.word)
                   )}
                 </p>
+                {clue && (
+                  <p className="mt-2 text-sm italic text-zinc-400 dark:text-zinc-500 text-center">
+                    {clue}
+                  </p>
+                )}
+                {current.image_url && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={current.image_url}
+                    alt={`Illustration for ${current.word}`}
+                    width={1024}
+                    height={1024}
+                    className="mt-3 w-full max-w-[240px] aspect-square object-contain rounded-lg border border-zinc-200 dark:border-zinc-700"
+                  />
+                )}
               </div>
 
               {/* Back details */}
@@ -137,6 +168,7 @@ export function VocabularyFlashcards() {
                     context={current.context}
                     contextSentences={current.context_sentences}
                     word={current.word}
+                    onSetMain={handleSetMain}
                   />
                   <DetailSection title="Connections" content={current.connections} />
                   <DetailSection title="Morphology" content={current.morphology} />
