@@ -88,7 +88,14 @@ function DoneVocabCard({ entry }: { entry: DoneVocabResult }) {
         onClick={() => setIsExpanded((prev) => !prev)}
         className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors"
       >
-        <span className="font-medium text-zinc-900 dark:text-zinc-100">{entry.word}</span>
+        <span className="flex items-center gap-2">
+          <span className="font-medium text-zinc-900 dark:text-zinc-100">{entry.word}</span>
+          {entry.fromDb && (
+            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700">
+              From DB
+            </span>
+          )}
+        </span>
         <span className="text-zinc-400 dark:text-zinc-500 text-sm">{isExpanded ? '−' : '+'}</span>
       </button>
 
