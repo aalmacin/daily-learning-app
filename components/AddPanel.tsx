@@ -3,12 +3,16 @@
 import { useState } from 'react'
 import { TermForm } from '@/components/TermForm'
 import { TermResult } from '@/components/TermResult'
-import { VocabularyForm } from '@/components/VocabularyForm'
-import { VocabularyResult } from '@/components/VocabularyResult'
+import { VocabularyPageContent } from '@/components/VocabularyPageContent'
+import type { VocabularyWord } from '@/lib/db'
 
 type Tab = 'explain' | 'vocabulary'
 
-export function AddPanel() {
+type Props = {
+  initialVocabWords?: VocabularyWord[]
+}
+
+export function AddPanel({ initialVocabWords = [] }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>('explain')
 
   return (
@@ -39,10 +43,7 @@ export function AddPanel() {
           <TermResult />
         </>
       ) : (
-        <>
-          <VocabularyForm />
-          <VocabularyResult />
-        </>
+        <VocabularyPageContent initialWords={initialVocabWords} />
       )}
     </div>
   )
