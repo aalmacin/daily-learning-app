@@ -1,5 +1,6 @@
 import { Store } from '@tanstack/store'
 import type { VocabularyWord } from '@/lib/db'
+import { addVocabularyWord } from '@/actions/vocabulary'
 
 export type PendingVocabResult = { status: 'processing'; key: string; word: string; type: 'word' | 'idiom' }
 export type ErrorVocabResult = { status: 'error'; key: string; word: string; error: string; type: 'word' | 'idiom' }
@@ -40,6 +41,31 @@ export function rejectVocabResult(key: string, error: string, type: 'word' | 'id
       w.key === key ? ({ status: 'error', key, word: w.word, error, type } as ErrorVocabResult) : w
     ),
   }))
+}
+
+export function retryVocabResult(key: string) {
+  vocabStore.setState((state) => ({
+    ...state,
+    activeWords: state.activeWords.map((w) =>
+      w.status === 'error' && w.key === key
+        ? ({ status: 'processing', key, word: w.word, type: w.type } as PendingVocabResult)
+        : w
+    ),
+  }))
+}
+
+export function processVocabularyWord(
+  key: string,
+  word: string,
+  type: 'word' | 'idiom',
+  onResolved?: () => void,
+) {
+  addVocabularyWord(word, type)
+    .then((w) => {
+      resolveVocabResult(key, w)
+      onResolved?.()
+    })
+    .catch((e) => rejectVocabResult(key, e instanceof Error ? e.message : 'Something went wrong', type))
 }
 
 export function dismissWord(key: string) {
