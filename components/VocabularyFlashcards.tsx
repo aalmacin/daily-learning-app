@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useTransition, useCallback } from 'react';
+import { useState, useEffect, useTransition } from 'react';
 import { getVocabularyReviewCards, submitVocabularyReview, setWordMainContext, regenerateVocabularyWord } from '@/actions/vocabulary';
 import { SRS_INTERVALS, type VocabularyWord } from '@/lib/db';
 import { VocabularyImage } from '@/components/VocabularyImage';
@@ -16,22 +16,24 @@ export function VocabularyFlashcards() {
   const [loading, setLoading] = useState(true);
   const [isPending, startTransition] = useTransition();
 
-  const loadCards = useCallback(async (type?: 'word' | 'idiom') => {
-    setLoading(true);
-    try {
-      const result = await getVocabularyReviewCards(type);
-      const shuffled = [...result.new].sort(() => Math.random() - 0.5);
-      setCards([...result.due, ...shuffled]);
-      setCurrentIndex(0);
-      setShowBack(false);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
-    loadCards(filter === 'all' ? undefined : filter);
-  }, [filter, loadCards]);
+    let cancelled = false;
+    setLoading(true);
+    getVocabularyReviewCards(filter === 'all' ? undefined : filter)
+      .then((result) => {
+        if (cancelled) return;
+        const shuffled = [...result.new].sort(() => Math.random() - 0.5);
+        setCards([...result.due, ...shuffled]);
+        setCurrentIndex(0);
+        setShowBack(false);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [filter]);
 
   const current = cards[currentIndex] ?? null;
   const frontSentence = current?.context_sentences?.[0]?.sentence ?? current?.flashcard_sentence ?? '';
