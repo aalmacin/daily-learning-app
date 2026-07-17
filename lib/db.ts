@@ -1464,6 +1464,7 @@ export async function getDueVocabularyWords(userId: string, type?: 'word' | 'idi
     .from('vocabulary_words')
     .select('*')
     .eq('user_id', userId)
+    .eq('flashcards_disabled', false)
     .not('next_review', 'is', null)
     .lte('next_review', new Date().toISOString());
   if (type) query = query.eq('type', type);
@@ -1479,6 +1480,7 @@ export async function getNewVocabularyWords(userId: string, type?: 'word' | 'idi
     .from('vocabulary_words')
     .select('*')
     .eq('user_id', userId)
+    .eq('flashcards_disabled', false)
     .is('next_review', null);
   if (type) query = query.eq('type', type);
 
@@ -1528,6 +1530,18 @@ export async function resetVocabularyReview(id: number, userId: string): Promise
   const { data, error } = await getSupabase()
     .from('vocabulary_words')
     .update({ interval_step: 0, next_review: null, last_reviewed: null } as unknown as never)
+    .eq('id', id)
+    .eq('user_id', userId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as VocabularyWord;
+}
+
+export async function setVocabularyWordDisabled(id: number, userId: string, disabled: boolean): Promise<VocabularyWord> {
+  const { data, error } = await getSupabase()
+    .from('vocabulary_words')
+    .update({ flashcards_disabled: disabled } as unknown as never)
     .eq('id', id)
     .eq('user_id', userId)
     .select()
