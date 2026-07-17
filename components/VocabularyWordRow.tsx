@@ -123,7 +123,7 @@ export function VocabularyWordRow({ word: w, isExpanded, onToggleExpand, onUpdat
                   disabled={isPending}
                   className="accent-zinc-900 dark:accent-zinc-100"
                 />
-                In review
+                In flashcard review
               </label>
               <button
                 onClick={handleRegenerate}
