@@ -5,10 +5,17 @@ import { TermForm } from '@/components/TermForm'
 import { TermResult } from '@/components/TermResult'
 import { VocabularyForm } from '@/components/VocabularyForm'
 import { VocabularyResult } from '@/components/VocabularyResult'
+import { VocabularyPageContent } from '@/components/VocabularyPageContent'
+import type { VocabularyWord } from '@/lib/db'
 
 type Tab = 'explain' | 'vocabulary'
 
-export function AddPanel() {
+type Props = {
+  initialVocabWords?: VocabularyWord[]
+  compactVocabulary?: boolean
+}
+
+export function AddPanel({ initialVocabWords = [], compactVocabulary = false }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>('explain')
 
   return (
@@ -38,11 +45,13 @@ export function AddPanel() {
           <TermForm />
           <TermResult />
         </>
-      ) : (
+      ) : compactVocabulary ? (
         <>
           <VocabularyForm />
           <VocabularyResult />
         </>
+      ) : (
+        <VocabularyPageContent initialWords={initialVocabWords} />
       )}
     </div>
   )

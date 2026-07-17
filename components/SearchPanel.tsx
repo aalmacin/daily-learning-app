@@ -52,7 +52,7 @@ export function SearchPanel() {
 
         <div className="flex-1 overflow-y-auto py-8 px-6">
           <div className="max-w-2xl mx-auto flex flex-col gap-8">
-            <AddPanel />
+            <AddPanel compactVocabulary />
           </div>
         </div>
       </div>
