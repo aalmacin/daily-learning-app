@@ -14,6 +14,7 @@ import {
   getNewVocabularyWords,
   reviewVocabularyWord,
   resetVocabularyReview,
+  setVocabularyWordDisabled,
   setMainContextSentence,
   updateVocabularyAnalysis,
   getVocabularyChatMessages,
@@ -248,5 +249,14 @@ export async function resetVocabularyReviewAction(id: number): Promise<Vocabular
   if (!user) throw new Error('Not authenticated');
   const word = await resetVocabularyReview(id, user.id);
   revalidatePath('/vocabulary');
+  return word;
+}
+
+export async function setVocabularyWordFlashcardsDisabled(id: number, disabled: boolean): Promise<VocabularyWord> {
+  const user = await getCurrentUser();
+  if (!user) throw new Error('Not authenticated');
+  const word = await setVocabularyWordDisabled(id, user.id, disabled);
+  revalidatePath('/vocabulary');
+  revalidatePath('/vocabulary/flashcards');
   return word;
 }
