@@ -114,6 +114,12 @@ export function VocabularyFlashcards() {
             <div className="border border-zinc-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-950 overflow-hidden">
               {/* Front */}
               <div className="p-6 sm:p-8 min-h-[160px] flex flex-col items-center justify-center">
+                {/* Type pill */}
+                <div className="mb-4">
+                  <span className="inline-block px-3 py-1 text-xs font-medium rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
+                    {current.type === 'word' ? 'Word' : 'Idiom'}
+                  </span>
+                </div>
                 <p className="text-base sm:text-lg text-zinc-700 dark:text-zinc-300 leading-8 text-center">
                   {!showBack ? (
                     renderCloze(frontSentence)
