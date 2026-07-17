@@ -1118,7 +1118,7 @@ export async function getDueFlashcards(userId: string, categoryNames?: string[])
   const { data, error } = await query;
   if (error) throw error;
 
-  return (data as unknown as (Flashcard & { terms: { name: string } })[]).map((row) => {
+  return (data as unknown as (Flashcard & { terms: { name: string; flashcards_disabled: boolean } })[]).map((row) => {
     const { terms, ...rest } = row;
     return { ...rest, term_name: terms.name };
   });
@@ -1155,7 +1155,7 @@ export async function getNewFlashcards(userId: string, categoryNames?: string[])
   const { data, error } = await query;
   if (error) throw error;
 
-  return (data as unknown as (Flashcard & { terms: { name: string } })[]).map((row) => {
+  return (data as unknown as (Flashcard & { terms: { name: string; flashcards_disabled: boolean } })[]).map((row) => {
     const { terms, ...rest } = row;
     return { ...rest, term_name: terms.name };
   });
