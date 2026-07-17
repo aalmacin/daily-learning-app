@@ -28,6 +28,7 @@ export type Term = {
   daily_learning_done: boolean;
   notion_date: string | null;
   notes: string | null;
+  flashcards_disabled: boolean;
 };
 
 export type Category = {
@@ -367,6 +368,7 @@ export async function updateTerm(
   if (updates.notion_page_id !== undefined) fields.notion_page_id = updates.notion_page_id;
   if (updates.priority !== undefined) fields.priority = updates.priority;
   if (updates.notes !== undefined) fields.notes = updates.notes;
+  if (updates.flashcards_disabled !== undefined) fields.flashcards_disabled = updates.flashcards_disabled;
 
   let row: TermRow;
   if (Object.keys(fields).length > 0) {
@@ -474,6 +476,7 @@ export const getTermById = cache(async (id: number): Promise<Term | null> => {
     daily_learning_done: row.daily_learning_done,
     notion_date: row.notion_date,
     notes: row.notes,
+    flashcards_disabled: false,
     categories,
     explained,
     explained_at: row.notion_date,

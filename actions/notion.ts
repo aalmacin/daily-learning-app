@@ -140,6 +140,7 @@ export async function syncWithNotion(): Promise<{ synced: number; imported: numb
         last_synced_at: null,
         daily_learning_done: false,
         notion_date: null,
+        flashcards_disabled: false,
       }, user.id);
     }),
   ]);

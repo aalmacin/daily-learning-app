@@ -47,6 +47,7 @@ export async function explainTerm(rawName: string, context?: string, useWeb = fa
       last_synced_at: null,
       daily_learning_done: false,
       notion_date: null,
+      flashcards_disabled: false,
     }, user.id);
   } catch (err) {
     if (isDuplicateKeyError(err)) {
