@@ -2,8 +2,7 @@
 
 import { useForm } from '@tanstack/react-form'
 import { useState } from 'react'
-import { addVocabularyWord } from '@/actions/vocabulary'
-import { addPendingWords, resolveVocabResult, rejectVocabResult } from '@/store/vocabStore'
+import { addPendingWords, processVocabularyWord } from '@/store/vocabStore'
 
 type WordType = 'word' | 'idiom'
 
@@ -29,14 +28,7 @@ export function VocabularyForm({ defaultWord, compact, onAdded }: Props = {}) {
       addPendingWords(keyed)
       form.setFieldValue('entries', '')
 
-      keyed.forEach(({ key, word }) => {
-        addVocabularyWord(word, type)
-          .then((w) => {
-            resolveVocabResult(key, w)
-            onAdded?.()
-          })
-          .catch((e) => rejectVocabResult(key, e instanceof Error ? e.message : 'Something went wrong', type))
-      })
+      keyed.forEach(({ key, word }) => processVocabularyWord(key, word, type, onAdded))
     },
   })
 
