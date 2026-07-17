@@ -6,6 +6,8 @@ import { VocabularyWordRow } from '@/components/VocabularyWordRow';
 import {
   vocabStore,
   dismissWord,
+  retryVocabResult,
+  processVocabularyWord,
   type DoneVocabResult,
   type PendingVocabResult,
   type ErrorVocabResult,
@@ -51,6 +53,11 @@ function PendingRow({ entry }: { entry: PendingVocabResult }) {
 }
 
 function ErrorRow({ entry }: { entry: ErrorVocabResult }) {
+  const handleRetry = () => {
+    retryVocabResult(entry.key);
+    processVocabularyWord(entry.key, entry.word, entry.type);
+  };
+
   return (
     <div className="border border-red-200 dark:border-red-900 rounded-xl bg-white dark:bg-zinc-950 px-4 py-3 flex flex-col gap-2">
       <div className="flex items-center">
@@ -58,6 +65,13 @@ function ErrorRow({ entry }: { entry: ErrorVocabResult }) {
         <DismissButton onDismiss={() => dismissWord(entry.key)} />
       </div>
       <p className="text-sm text-red-600 dark:text-red-400">{entry.error}</p>
+      <button
+        type="button"
+        onClick={handleRetry}
+        className="self-start text-xs font-medium text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+      >
+        Retry
+      </button>
     </div>
   );
 }

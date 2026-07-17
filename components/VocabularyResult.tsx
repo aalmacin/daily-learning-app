@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useStore } from '@tanstack/react-store'
-import { vocabStore, dismissWord, removeWordFromStore, updateWordImageInStore, type VocabResult, type DoneVocabResult } from '@/store/vocabStore'
+import { vocabStore, dismissWord, removeWordFromStore, updateWordImageInStore, retryVocabResult, processVocabularyWord, type VocabResult, type DoneVocabResult } from '@/store/vocabStore'
 import { removeVocabularyWord } from '@/actions/vocabulary'
 import { VocabularyImage } from '@/components/VocabularyImage'
 import { VocabularyContextSentences } from '@/components/VocabularyContextSentences'
@@ -41,7 +41,12 @@ function ProcessingCard({ word, vocabKey }: { word: string; vocabKey: string }) 
   )
 }
 
-function ErrorCard({ word, error, vocabKey }: { word: string; error: string; vocabKey: string }) {
+function ErrorCard({ word, error, vocabKey, type }: { word: string; error: string; vocabKey: string; type: 'word' | 'idiom' }) {
+  const handleRetry = () => {
+    retryVocabResult(vocabKey)
+    processVocabularyWord(vocabKey, word, type)
+  }
+
   return (
     <div className="bg-white dark:bg-zinc-900 rounded-xl border border-red-200 dark:border-red-900 p-6 flex flex-col gap-2">
       <div className="flex items-center">
@@ -49,6 +54,12 @@ function ErrorCard({ word, error, vocabKey }: { word: string; error: string; voc
         <DismissButton onDismiss={() => dismissWord(vocabKey)} />
       </div>
       <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+      <button
+        onClick={handleRetry}
+        className="self-start text-xs font-medium text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+      >
+        Retry
+      </button>
     </div>
   )
 }
@@ -139,7 +150,7 @@ function DoneVocabCard({ entry }: { entry: DoneVocabResult }) {
 
 function VocabCard({ entry }: { entry: VocabResult }) {
   if (entry.status === 'processing') return <ProcessingCard word={entry.word} vocabKey={entry.key} />
-  if (entry.status === 'error') return <ErrorCard word={entry.word} error={entry.error} vocabKey={entry.key} />
+  if (entry.status === 'error') return <ErrorCard word={entry.word} error={entry.error} vocabKey={entry.key} type={entry.type} />
   return <DoneVocabCard entry={entry} />
 }
 
