@@ -35,7 +35,7 @@ export function VocabularyForm({ defaultWord, compact, onAdded }: Props = {}) {
             resolveVocabResult(key, w)
             onAdded?.()
           })
-          .catch((e) => rejectVocabResult(key, e instanceof Error ? e.message : 'Something went wrong'))
+          .catch((e) => rejectVocabResult(key, e instanceof Error ? e.message : 'Something went wrong', type))
       })
     },
   })

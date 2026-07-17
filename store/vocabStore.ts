@@ -2,7 +2,7 @@ import { Store } from '@tanstack/store'
 import type { VocabularyWord } from '@/lib/db'
 
 export type PendingVocabResult = { status: 'processing'; key: string; word: string; type: 'word' | 'idiom' }
-export type ErrorVocabResult = { status: 'error'; key: string; word: string; error: string }
+export type ErrorVocabResult = { status: 'error'; key: string; word: string; error: string; type: 'word' | 'idiom' }
 export type DoneVocabResult = VocabularyWord & { status: 'done'; key: string; fromDb?: boolean }
 export type VocabResult = PendingVocabResult | ErrorVocabResult | DoneVocabResult
 
@@ -33,11 +33,11 @@ export function resolveVocabResult(key: string, word: VocabularyWord & { fromDb?
   }))
 }
 
-export function rejectVocabResult(key: string, error: string) {
+export function rejectVocabResult(key: string, error: string, type: 'word' | 'idiom') {
   vocabStore.setState((state) => ({
     ...state,
     activeWords: state.activeWords.map((w) =>
-      w.key === key ? ({ status: 'error', key, word: w.word, error } as ErrorVocabResult) : w
+      w.key === key ? ({ status: 'error', key, word: w.word, error, type } as ErrorVocabResult) : w
     ),
   }))
 }
