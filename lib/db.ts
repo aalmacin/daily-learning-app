@@ -445,7 +445,7 @@ export const getTermById = cache(async (id: number): Promise<Term | null> => {
   const { data, error } = await getSupabase()
     .from('terms')
     .select(
-      'id, name, content, created_at, updated_at, notion_page_id, notion_last_edited, last_synced_at, priority, daily_learning_done, notion_date, notes, term_categories(categories(name)), concept_refinements!left(id)'
+      'id, name, content, created_at, updated_at, notion_page_id, notion_last_edited, last_synced_at, priority, daily_learning_done, notion_date, notes, flashcards_disabled, term_categories(categories(name)), concept_refinements!left(id)'
     )
     .eq('id', id)
     .not('concept_refinements.refinement_formatted_note', 'is', null)
@@ -476,7 +476,7 @@ export const getTermById = cache(async (id: number): Promise<Term | null> => {
     daily_learning_done: row.daily_learning_done,
     notion_date: row.notion_date,
     notes: row.notes,
-    flashcards_disabled: false,
+    flashcards_disabled: row.flashcards_disabled,
     categories,
     explained,
     explained_at: row.notion_date,
