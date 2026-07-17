@@ -1,7 +1,7 @@
 'use client';
 
 import { useTransition } from 'react';
-import { removeVocabularyWord, resetVocabularyReviewAction, setWordMainContext, regenerateVocabularyWord } from '@/actions/vocabulary';
+import { removeVocabularyWord, resetVocabularyReviewAction, setWordMainContext, regenerateVocabularyWord, setVocabularyWordFlashcardsDisabled } from '@/actions/vocabulary';
 import { SRS_INTERVALS, type VocabularyWord } from '@/lib/db';
 import { VocabularyImage } from '@/components/VocabularyImage';
 import { VocabularyContextSentences } from '@/components/VocabularyContextSentences';
@@ -49,6 +49,13 @@ export function VocabularyWordRow({ word: w, isExpanded, onToggleExpand, onUpdat
     if (!confirm('Regenerate this word’s definition, example sentences, and image? This overwrites the current version.')) return;
     startTransition(async () => {
       const updated = await regenerateVocabularyWord(w.id);
+      onUpdated(updated);
+    });
+  };
+
+  const handleToggleDisabled = () => {
+    startTransition(async () => {
+      const updated = await setVocabularyWordFlashcardsDisabled(w.id, !w.flashcards_disabled);
       onUpdated(updated);
     });
   };
@@ -107,7 +114,17 @@ export function VocabularyWordRow({ word: w, isExpanded, onToggleExpand, onUpdat
                 <span>New — not yet reviewed</span>
               )}
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 items-center">
+              <label className="flex items-center gap-1.5 text-xs text-zinc-600 dark:text-zinc-400 select-none cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={!w.flashcards_disabled}
+                  onChange={handleToggleDisabled}
+                  disabled={isPending}
+                  className="accent-zinc-900 dark:accent-zinc-100"
+                />
+                In review
+              </label>
               <button
                 onClick={handleRegenerate}
                 disabled={isPending}
@@ -131,6 +148,11 @@ export function VocabularyWordRow({ word: w, isExpanded, onToggleExpand, onUpdat
               </button>
             </div>
           </div>
+          {w.flashcards_disabled && (
+            <p className="text-xs text-zinc-400 dark:text-zinc-500">
+              Hidden from flashcard review. Its schedule is kept.
+            </p>
+          )}
         </div>
       )}
     </div>
