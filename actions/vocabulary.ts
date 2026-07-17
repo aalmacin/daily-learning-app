@@ -5,6 +5,7 @@ import {
   getVocabularyWords,
   searchVocabularyWords,
   getVocabularyWordById,
+  findVocabularyWordByWord,
   insertVocabularyWord,
   deleteVocabularyWord,
   uploadVocabularyImage,
@@ -38,17 +39,25 @@ import { getCurrentUser } from '@/lib/auth';
 export async function addVocabularyWord(
   word: string,
   type: 'word' | 'idiom',
-): Promise<VocabularyWord> {
+): Promise<VocabularyWord & { fromDb: boolean }> {
   const user = await getCurrentUser();
   if (!user) throw new Error('Not authenticated');
 
-  const analysis = await analyzeVocabulary(word, type);
+  const trimmedWord = word.trim();
+
+  const existing = await findVocabularyWordByWord(user.id, trimmedWord, type);
+  if (existing) return { ...existing, fromDb: true };
+
+  const analysis = await analyzeVocabulary(trimmedWord, type);
   if (!analysis.recognized) {
-    throw new Error(`Could not recognize a valid ${type} from "${word}"`);
+    throw new Error(`Could not recognize a valid ${type} from "${trimmedWord}"`);
   }
 
-  const correctedWord = analysis.corrected;
+  const correctedWord = analysis.corrected.trim().toLowerCase();
   const mainSentence = analysis.context_sentences[0];
+
+  const existingCorrected = await findVocabularyWordByWord(user.id, correctedWord, type);
+  if (existingCorrected) return { ...existingCorrected, fromDb: true };
 
   const entry = await insertVocabularyWord({
     user_id: user.id,
@@ -63,7 +72,7 @@ export async function addVocabularyWord(
   });
 
   revalidatePath('/vocabulary');
-  return entry;
+  return { ...entry, fromDb: false };
 }
 
 export async function removeVocabularyWord(id: number): Promise<void> {

@@ -3,7 +3,7 @@ import type { VocabularyWord } from '@/lib/db'
 
 export type PendingVocabResult = { status: 'processing'; key: string; word: string; type: 'word' | 'idiom' }
 export type ErrorVocabResult = { status: 'error'; key: string; word: string; error: string }
-export type DoneVocabResult = VocabularyWord & { status: 'done'; key: string }
+export type DoneVocabResult = VocabularyWord & { status: 'done'; key: string; fromDb?: boolean }
 export type VocabResult = PendingVocabResult | ErrorVocabResult | DoneVocabResult
 
 interface VocabState {
@@ -24,7 +24,7 @@ export function addPendingWords(entries: { key: string; word: string; type: 'wor
   }))
 }
 
-export function resolveVocabResult(key: string, word: VocabularyWord) {
+export function resolveVocabResult(key: string, word: VocabularyWord & { fromDb?: boolean }) {
   vocabStore.setState((state) => ({
     ...state,
     activeWords: state.activeWords.map((w) =>
