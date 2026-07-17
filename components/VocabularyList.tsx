@@ -16,6 +16,8 @@ import type { VocabularyWord } from '@/lib/db';
 
 type Props = {
   initialWords: VocabularyWord[];
+  activeTab: 'word' | 'idiom';
+  onCountsChange?: (counts: { word: number; idiom: number }) => void;
 };
 
 function DismissButton({ onDismiss }: { onDismiss: () => void }) {
@@ -76,9 +78,8 @@ function ErrorRow({ entry }: { entry: ErrorVocabResult }) {
   );
 }
 
-export function VocabularyList({ initialWords }: Props) {
+export function VocabularyList({ initialWords, activeTab, onCountsChange }: Props) {
   const [words, setWords] = useState(initialWords);
-  const [activeTab, setActiveTab] = useState<'word' | 'idiom'>('word');
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
   const [query, setQuery] = useState('');
 
@@ -98,6 +99,13 @@ export function VocabularyList({ initialWords }: Props) {
 
     doneEntries.forEach((entry) => dismissWord(entry.key));
   }, [activeWords]);
+
+  useEffect(() => {
+    onCountsChange?.({
+      word: words.filter((w) => w.type === 'word').length,
+      idiom: words.filter((w) => w.type === 'idiom').length,
+    });
+  }, [words, onCountsChange]);
 
   const trimmedQuery = query.trim();
   const filtered = words.filter(
@@ -152,26 +160,6 @@ export function VocabularyList({ initialWords }: Props) {
             </svg>
           </button>
         )}
-      </div>
-
-      {/* Tabs */}
-      <div className="flex gap-1 border-b border-zinc-200 dark:border-zinc-800">
-        {(['word', 'idiom'] as const).map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 text-sm font-medium transition-colors ${
-              activeTab === tab
-                ? 'border-b-2 border-zinc-900 dark:border-zinc-100 text-zinc-900 dark:text-zinc-50'
-                : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300'
-            }`}
-          >
-            {tab === 'word' ? 'Words' : 'Idioms'}
-            <span className="ml-1.5 text-xs text-zinc-400 dark:text-zinc-500">
-              ({words.filter((w) => w.type === tab).length})
-            </span>
-          </button>
-        ))}
       </div>
 
       {/* Word list */}

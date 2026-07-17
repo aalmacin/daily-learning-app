@@ -10,10 +10,12 @@ type Props = {
   defaultWord?: string
   compact?: boolean
   onAdded?: () => void
+  type?: WordType
 }
 
-export function VocabularyForm({ defaultWord, compact, onAdded }: Props = {}) {
-  const [type, setType] = useState<WordType>('word')
+export function VocabularyForm({ defaultWord, compact, onAdded, type: controlledType }: Props = {}) {
+  const [internalType, setInternalType] = useState<WordType>('word')
+  const type = controlledType ?? internalType
 
   const form = useForm({
     defaultValues: { entries: defaultWord ?? '' },
@@ -35,13 +37,13 @@ export function VocabularyForm({ defaultWord, compact, onAdded }: Props = {}) {
   const inputClass =
     'w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-sm text-zinc-900 dark:text-zinc-50 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-500'
 
-  const typeTabs = (
+  const typeTabs = controlledType ? null : (
     <div className={`flex gap-1 border-b border-zinc-200 dark:border-zinc-800 ${compact ? '' : 'mb-4'}`}>
       {(['word', 'idiom'] as const).map((tab) => (
         <button
           key={tab}
           type="button"
-          onClick={() => setType(tab)}
+          onClick={() => setInternalType(tab)}
           className={`px-4 py-2 text-sm font-medium capitalize transition-colors border-b-2 -mb-px ${
             type === tab
               ? 'border-zinc-900 dark:border-zinc-50 text-zinc-900 dark:text-zinc-50'
