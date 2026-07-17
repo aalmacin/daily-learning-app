@@ -1345,6 +1345,7 @@ export type VocabularyWord = {
   last_reviewed: string | null;
   created_at: string;
   updated_at: string;
+  flashcards_disabled: boolean;
 };
 
 export async function searchVocabularyWords(userId: string, q: string): Promise<VocabularyWord[]> {
@@ -1402,7 +1403,7 @@ export async function getVocabularyWordById(id: number, userId: string): Promise
 export async function insertVocabularyWord(
   input: Omit<
     VocabularyWord,
-    'id' | 'created_at' | 'updated_at' | 'image_url' | 'image_prompt' | 'image_model' | 'interval_step' | 'next_review' | 'last_reviewed'
+    'id' | 'created_at' | 'updated_at' | 'image_url' | 'image_prompt' | 'image_model' | 'interval_step' | 'next_review' | 'last_reviewed' | 'flashcards_disabled'
   >,
 ): Promise<VocabularyWord> {
   const { data, error } = await getSupabase()
