@@ -126,6 +126,16 @@ export function VocabularyFlashcards() {
                     {clue}
                   </p>
                 )}
+                {current.image_url && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={current.image_url}
+                    alt={`Illustration for ${current.word}`}
+                    width={1024}
+                    height={1024}
+                    className="mt-3 w-full max-w-[240px] aspect-square object-contain rounded-lg border border-zinc-200 dark:border-zinc-700"
+                  />
+                )}
               </div>
 
               {/* Back details */}
