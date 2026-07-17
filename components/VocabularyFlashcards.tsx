@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useTransition, useCallback } from 'react';
-import { getVocabularyReviewCards, submitVocabularyReview } from '@/actions/vocabulary';
+import { getVocabularyReviewCards, submitVocabularyReview, setWordMainContext } from '@/actions/vocabulary';
 import { SRS_INTERVALS, type VocabularyWord } from '@/lib/db';
 import { VocabularyImage } from '@/components/VocabularyImage';
 import { VocabularyContextSentences } from '@/components/VocabularyContextSentences';
@@ -55,6 +55,14 @@ export function VocabularyFlashcards() {
     setCards((prev) =>
       prev.map((c) => (c.id === current.id ? { ...c, image_url: imageUrl, image_model: imageModel } : c)),
     );
+  };
+
+  const handleSetMain = (index: number) => {
+    if (!current) return;
+    startTransition(async () => {
+      const updated = await setWordMainContext(current.id, index);
+      setCards((prev) => prev.map((c) => (c.id === current.id ? updated : c)));
+    });
   };
 
   const handleReview = (correct: boolean) => {
@@ -160,6 +168,7 @@ export function VocabularyFlashcards() {
                     context={current.context}
                     contextSentences={current.context_sentences}
                     word={current.word}
+                    onSetMain={handleSetMain}
                   />
                   <DetailSection title="Connections" content={current.connections} />
                   <DetailSection title="Morphology" content={current.morphology} />
