@@ -13,7 +13,9 @@ import {
   getAllCategories,
   getUserSettings,
   getTermIdsReviewedToday,
+  updateTerm,
   type Flashcard,
+  type Term,
 } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 
@@ -100,4 +102,14 @@ export async function getFlashcardCategories(): Promise<{ id: number; name: stri
   const user = await getCurrentUser();
   if (!user) throw new Error('Not authenticated');
   return getAllCategories(user.id);
+}
+
+export async function setTermFlashcardsDisabled(termId: number, disabled: boolean): Promise<Term> {
+  const user = await getCurrentUser();
+  if (!user) throw new Error('Not authenticated');
+  const updated = await updateTerm(termId, { flashcards_disabled: disabled });
+  if (!updated) throw new Error('Term not found');
+  revalidatePath(`/terms/${termId}`);
+  revalidatePath('/flashcards');
+  return updated;
 }

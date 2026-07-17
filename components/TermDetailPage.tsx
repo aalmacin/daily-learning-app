@@ -694,6 +694,7 @@ export function TermDetailPage({ term, initialRefinements, initialChats, explain
                   termId={term.id}
                   formattedNote={viewing.refinement_formatted_note}
                   initialFlashcards={initialFlashcards}
+                  flashcardsDisabled={term.flashcards_disabled}
                 />
               )}
             </div>

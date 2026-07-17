@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { addFlashcard, editFlashcard, removeFlashcard, resetFlashcard } from '@/actions/flashcards';
+import { addFlashcard, editFlashcard, removeFlashcard, resetFlashcard, setTermFlashcardsDisabled } from '@/actions/flashcards';
 import { hasClozeMarkers } from '@/lib/cloze';
 import { SRS_INTERVALS, type Flashcard } from '@/lib/db';
 
@@ -14,10 +14,12 @@ type Props = {
   termId: number;
   formattedNote: string;
   initialFlashcards: Flashcard[];
+  flashcardsDisabled: boolean;
 };
 
-export function FlashcardSection({ termId, formattedNote, initialFlashcards }: Props) {
+export function FlashcardSection({ termId, formattedNote, initialFlashcards, flashcardsDisabled }: Props) {
   const [flashcards, setFlashcards] = useState(initialFlashcards);
+  const [disabled, setDisabled] = useState(flashcardsDisabled);
   const [isCreating, setIsCreating] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [content, setContent] = useState('');
@@ -84,6 +86,20 @@ export function FlashcardSection({ termId, formattedNote, initialFlashcards }: P
     });
   };
 
+  const handleToggleDisabled = () => {
+    const next = !disabled;
+    setDisabled(next);
+    setError(null);
+    startTransition(async () => {
+      try {
+        await setTermFlashcardsDisabled(termId, next);
+      } catch (e) {
+        setDisabled(!next);
+        setError(e instanceof Error ? e.message : 'Failed to update');
+      }
+    });
+  };
+
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return null;
     const [, month, day] = dateStr.slice(0, 10).split('-').map(Number);
@@ -92,13 +108,30 @@ export function FlashcardSection({ termId, formattedNote, initialFlashcards }: P
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2 mb-3">
-        <span className="flex items-center justify-center w-5 h-5 rounded-full bg-zinc-200 dark:bg-zinc-700 text-xs font-bold text-zinc-700 dark:text-zinc-200">
-          4
-        </span>
-        <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-          Flashcards
-        </span>
+      <div className="mb-3 space-y-1">
+        <div className="flex items-center gap-2">
+          <span className="flex items-center justify-center w-5 h-5 rounded-full bg-zinc-200 dark:bg-zinc-700 text-xs font-bold text-zinc-700 dark:text-zinc-200">
+            4
+          </span>
+          <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+            Flashcards
+          </span>
+          <label className="ml-auto flex items-center gap-1.5 text-xs text-zinc-600 dark:text-zinc-400 select-none cursor-pointer">
+            <input
+              type="checkbox"
+              checked={!disabled}
+              onChange={handleToggleDisabled}
+              disabled={isPending}
+              className="accent-zinc-900 dark:accent-zinc-100"
+            />
+            Include in flashcard review
+          </label>
+        </div>
+        {disabled && (
+          <p className="text-xs text-zinc-400 dark:text-zinc-500 pl-7">
+            Disabled terms are hidden from review but keep their cards and schedule.
+          </p>
+        )}
       </div>
 
       {!isCreating && (

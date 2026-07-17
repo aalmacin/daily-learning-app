@@ -28,6 +28,7 @@ export type Term = {
   daily_learning_done: boolean;
   notion_date: string | null;
   notes: string | null;
+  flashcards_disabled: boolean;
 };
 
 export type Category = {
@@ -367,6 +368,7 @@ export async function updateTerm(
   if (updates.notion_page_id !== undefined) fields.notion_page_id = updates.notion_page_id;
   if (updates.priority !== undefined) fields.priority = updates.priority;
   if (updates.notes !== undefined) fields.notes = updates.notes;
+  if (updates.flashcards_disabled !== undefined) fields.flashcards_disabled = updates.flashcards_disabled;
 
   let row: TermRow;
   if (Object.keys(fields).length > 0) {
@@ -443,7 +445,7 @@ export const getTermById = cache(async (id: number): Promise<Term | null> => {
   const { data, error } = await getSupabase()
     .from('terms')
     .select(
-      'id, name, content, created_at, updated_at, notion_page_id, notion_last_edited, last_synced_at, priority, daily_learning_done, notion_date, notes, term_categories(categories(name)), concept_refinements!left(id)'
+      'id, name, content, created_at, updated_at, notion_page_id, notion_last_edited, last_synced_at, priority, daily_learning_done, notion_date, notes, flashcards_disabled, term_categories(categories(name)), concept_refinements!left(id)'
     )
     .eq('id', id)
     .not('concept_refinements.refinement_formatted_note', 'is', null)
@@ -474,6 +476,7 @@ export const getTermById = cache(async (id: number): Promise<Term | null> => {
     daily_learning_done: row.daily_learning_done,
     notion_date: row.notion_date,
     notes: row.notes,
+    flashcards_disabled: row.flashcards_disabled,
     categories,
     explained,
     explained_at: row.notion_date,
@@ -1104,8 +1107,9 @@ export async function getDueFlashcards(userId: string, categoryNames?: string[])
 
   let query = getSupabase()
     .from('flashcards')
-    .select('*, terms(name)')
+    .select('*, terms!inner(name, flashcards_disabled)')
     .eq('user_id', userId)
+    .eq('terms.flashcards_disabled', false)
     .not('next_review', 'is', null)
     .lte('next_review', new Date().toISOString());
   if (termIdFilter) query = query.in('term_id', termIdFilter);
@@ -1114,7 +1118,7 @@ export async function getDueFlashcards(userId: string, categoryNames?: string[])
   const { data, error } = await query;
   if (error) throw error;
 
-  return (data as unknown as (Flashcard & { terms: { name: string } })[]).map((row) => {
+  return (data as unknown as (Flashcard & { terms: { name: string; flashcards_disabled: boolean } })[]).map((row) => {
     const { terms, ...rest } = row;
     return { ...rest, term_name: terms.name };
   });
@@ -1142,15 +1146,16 @@ export async function getNewFlashcards(userId: string, categoryNames?: string[])
 
   let query = getSupabase()
     .from('flashcards')
-    .select('*, terms(name)')
+    .select('*, terms!inner(name, flashcards_disabled)')
     .eq('user_id', userId)
+    .eq('terms.flashcards_disabled', false)
     .is('next_review', null);
   if (termIdFilter) query = query.in('term_id', termIdFilter);
 
   const { data, error } = await query;
   if (error) throw error;
 
-  return (data as unknown as (Flashcard & { terms: { name: string } })[]).map((row) => {
+  return (data as unknown as (Flashcard & { terms: { name: string; flashcards_disabled: boolean } })[]).map((row) => {
     const { terms, ...rest } = row;
     return { ...rest, term_name: terms.name };
   });
@@ -1340,6 +1345,7 @@ export type VocabularyWord = {
   last_reviewed: string | null;
   created_at: string;
   updated_at: string;
+  flashcards_disabled: boolean;
 };
 
 export async function searchVocabularyWords(userId: string, q: string): Promise<VocabularyWord[]> {
@@ -1397,7 +1403,7 @@ export async function getVocabularyWordById(id: number, userId: string): Promise
 export async function insertVocabularyWord(
   input: Omit<
     VocabularyWord,
-    'id' | 'created_at' | 'updated_at' | 'image_url' | 'image_prompt' | 'image_model' | 'interval_step' | 'next_review' | 'last_reviewed'
+    'id' | 'created_at' | 'updated_at' | 'image_url' | 'image_prompt' | 'image_model' | 'interval_step' | 'next_review' | 'last_reviewed' | 'flashcards_disabled'
   >,
 ): Promise<VocabularyWord> {
   const { data, error } = await getSupabase()
@@ -1458,6 +1464,7 @@ export async function getDueVocabularyWords(userId: string, type?: 'word' | 'idi
     .from('vocabulary_words')
     .select('*')
     .eq('user_id', userId)
+    .eq('flashcards_disabled', false)
     .not('next_review', 'is', null)
     .lte('next_review', new Date().toISOString());
   if (type) query = query.eq('type', type);
@@ -1473,6 +1480,7 @@ export async function getNewVocabularyWords(userId: string, type?: 'word' | 'idi
     .from('vocabulary_words')
     .select('*')
     .eq('user_id', userId)
+    .eq('flashcards_disabled', false)
     .is('next_review', null);
   if (type) query = query.eq('type', type);
 
@@ -1522,6 +1530,18 @@ export async function resetVocabularyReview(id: number, userId: string): Promise
   const { data, error } = await getSupabase()
     .from('vocabulary_words')
     .update({ interval_step: 0, next_review: null, last_reviewed: null } as unknown as never)
+    .eq('id', id)
+    .eq('user_id', userId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as VocabularyWord;
+}
+
+export async function setVocabularyWordDisabled(id: number, userId: string, disabled: boolean): Promise<VocabularyWord> {
+  const { data, error } = await getSupabase()
+    .from('vocabulary_words')
+    .update({ flashcards_disabled: disabled } as unknown as never)
     .eq('id', id)
     .eq('user_id', userId)
     .select()
