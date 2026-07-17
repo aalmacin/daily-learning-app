@@ -1107,8 +1107,9 @@ export async function getDueFlashcards(userId: string, categoryNames?: string[])
 
   let query = getSupabase()
     .from('flashcards')
-    .select('*, terms(name)')
+    .select('*, terms!inner(name, flashcards_disabled)')
     .eq('user_id', userId)
+    .eq('terms.flashcards_disabled', false)
     .not('next_review', 'is', null)
     .lte('next_review', new Date().toISOString());
   if (termIdFilter) query = query.in('term_id', termIdFilter);
@@ -1145,8 +1146,9 @@ export async function getNewFlashcards(userId: string, categoryNames?: string[])
 
   let query = getSupabase()
     .from('flashcards')
-    .select('*, terms(name)')
+    .select('*, terms!inner(name, flashcards_disabled)')
     .eq('user_id', userId)
+    .eq('terms.flashcards_disabled', false)
     .is('next_review', null);
   if (termIdFilter) query = query.in('term_id', termIdFilter);
 
