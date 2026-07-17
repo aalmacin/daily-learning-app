@@ -6,6 +6,7 @@ import { SRS_INTERVALS, type VocabularyWord } from '@/lib/db';
 import { VocabularyImage } from '@/components/VocabularyImage';
 import { VocabularyContextSentences } from '@/components/VocabularyContextSentences';
 import { VocabularyAssistant } from '@/components/VocabularyAssistant';
+import { getFlashcardClue } from '@/lib/vocabulary-clue';
 
 export function VocabularyFlashcards() {
   const [filter, setFilter] = useState<'all' | 'word' | 'idiom'>('all');
@@ -34,6 +35,7 @@ export function VocabularyFlashcards() {
 
   const current = cards[currentIndex] ?? null;
   const frontSentence = current?.context_sentences?.[0]?.sentence ?? current?.flashcard_sentence ?? '';
+  const clue = current ? getFlashcardClue(current.word, current.definition) : '';
   const remainingCards = cards.slice(currentIndex);
   const dueCount = remainingCards.filter((c) => c.next_review !== null).length;
   const newCount = remainingCards.filter((c) => c.next_review === null).length;
@@ -111,7 +113,7 @@ export function VocabularyFlashcards() {
             {/* Card */}
             <div className="border border-zinc-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-950 overflow-hidden">
               {/* Front */}
-              <div className="p-6 sm:p-8 min-h-[160px] flex items-center justify-center">
+              <div className="p-6 sm:p-8 min-h-[160px] flex flex-col items-center justify-center">
                 <p className="text-base sm:text-lg text-zinc-700 dark:text-zinc-300 leading-8 text-center">
                   {!showBack ? (
                     renderCloze(frontSentence)
@@ -119,6 +121,11 @@ export function VocabularyFlashcards() {
                     renderComplete(frontSentence, current.word)
                   )}
                 </p>
+                {clue && (
+                  <p className="mt-2 text-sm italic text-zinc-400 dark:text-zinc-500 text-center">
+                    {clue}
+                  </p>
+                )}
               </div>
 
               {/* Back details */}
