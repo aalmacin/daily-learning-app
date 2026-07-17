@@ -5,6 +5,7 @@ import {
   getVocabularyWords,
   searchVocabularyWords,
   getVocabularyWordById,
+  findVocabularyWordByWord,
   insertVocabularyWord,
   deleteVocabularyWord,
   uploadVocabularyImage,
@@ -42,13 +43,21 @@ export async function addVocabularyWord(
   const user = await getCurrentUser();
   if (!user) throw new Error('Not authenticated');
 
-  const analysis = await analyzeVocabulary(word, type);
+  const trimmedWord = word.trim();
+
+  const existing = await findVocabularyWordByWord(user.id, trimmedWord, type);
+  if (existing) return existing;
+
+  const analysis = await analyzeVocabulary(trimmedWord, type);
   if (!analysis.recognized) {
-    throw new Error(`Could not recognize a valid ${type} from "${word}"`);
+    throw new Error(`Could not recognize a valid ${type} from "${trimmedWord}"`);
   }
 
   const correctedWord = analysis.corrected;
   const mainSentence = analysis.context_sentences[0];
+
+  const existingCorrected = await findVocabularyWordByWord(user.id, correctedWord, type);
+  if (existingCorrected) return existingCorrected;
 
   const entry = await insertVocabularyWord({
     user_id: user.id,

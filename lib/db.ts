@@ -1354,6 +1354,23 @@ export async function searchVocabularyWords(userId: string, q: string): Promise<
   return data as VocabularyWord[];
 }
 
+export async function findVocabularyWordByWord(
+  userId: string,
+  word: string,
+  type: 'word' | 'idiom',
+): Promise<VocabularyWord | null> {
+  const { data, error } = await getSupabase()
+    .from('vocabulary_words')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('type', type)
+    .ilike('word', word)
+    .order('created_at', { ascending: true })
+    .limit(1);
+  if (error) throw error;
+  return (data as VocabularyWord[])[0] ?? null;
+}
+
 export async function getVocabularyWords(userId: string, type?: 'word' | 'idiom'): Promise<VocabularyWord[]> {
   let query = getSupabase()
     .from('vocabulary_words')
