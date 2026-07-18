@@ -72,15 +72,21 @@ export function VocabularyChatPanel({ wordId, word }: Props) {
         </div>
       )}
       {error && <p className="px-1 py-1 text-xs text-red-600 dark:text-red-400">{error}</p>}
-      <form onSubmit={handleSubmit} className="pt-2 flex gap-2">
-        <input
-          type="text"
+      <form onSubmit={handleSubmit} className="pt-2 flex gap-2 items-end">
+        <textarea
+          rows={2}
           aria-label={`Ask a question about ${word}`}
           value={input}
           onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              e.currentTarget.form?.requestSubmit();
+            }
+          }}
           placeholder={loading ? 'Loading…' : `Ask about ${word}…`}
           disabled={isDisabled}
-          className="flex-1 px-2.5 py-1.5 text-xs border border-zinc-200 dark:border-zinc-700 rounded-md bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:focus:ring-zinc-600 disabled:opacity-50"
+          className="flex-1 px-2.5 py-1.5 text-xs border border-zinc-200 dark:border-zinc-700 rounded-md bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:focus:ring-zinc-600 disabled:opacity-50 resize-y"
         />
         <button
           type="submit"
