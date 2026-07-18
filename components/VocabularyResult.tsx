@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import { useStore } from '@tanstack/react-store'
-import { vocabStore, dismissWord, removeWordFromStore, updateWordImageInStore, retryVocabResult, processVocabularyWord, type VocabResult, type DoneVocabResult } from '@/store/vocabStore'
-import { removeVocabularyWord } from '@/actions/vocabulary'
+import { vocabStore, dismissWord, removeWordFromStore, updateWordImageInStore, updateWordInStore, retryVocabResult, processVocabularyWord, type VocabResult, type DoneVocabResult } from '@/store/vocabStore'
+import { removeVocabularyWord, regenerateVocabularyWord } from '@/actions/vocabulary'
 import { VocabularyImage } from '@/components/VocabularyImage'
 import { VocabularyContextSentences } from '@/components/VocabularyContextSentences'
 
@@ -80,6 +80,18 @@ function Section({ title, content }: { title: string; content: string }) {
 function DoneVocabCard({ entry }: { entry: DoneVocabResult }) {
   const [isExpanded, setIsExpanded] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [isRegenerating, setIsRegenerating] = useState(false)
+
+  const handleRegenerate = async () => {
+    if (!confirm('Regenerate this word’s definition, example sentences, and image? This overwrites the current version.')) return
+    setIsRegenerating(true)
+    try {
+      const updated = await regenerateVocabularyWord(entry.id)
+      updateWordInStore(updated)
+    } finally {
+      setIsRegenerating(false)
+    }
+  }
 
   const handleDelete = async () => {
     if (!confirm('Delete this word?')) return;
@@ -134,6 +146,13 @@ function DoneVocabCard({ entry }: { entry: DoneVocabResult }) {
               className="text-xs text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-40"
             >
               {isDeleting ? 'Deleting…' : 'Delete'}
+            </button>
+            <button
+              onClick={handleRegenerate}
+              disabled={isRegenerating}
+              className="text-xs text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300 disabled:opacity-40"
+            >
+              {isRegenerating ? 'Regenerating…' : 'Regenerate'}
             </button>
             <button
               onClick={() => dismissWord(entry.key)}

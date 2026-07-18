@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useTransition, useCallback } from 'react';
-import { getVocabularyReviewCards, submitVocabularyReview, setWordMainContext } from '@/actions/vocabulary';
+import { getVocabularyReviewCards, submitVocabularyReview, setWordMainContext, regenerateVocabularyWord } from '@/actions/vocabulary';
 import { SRS_INTERVALS, type VocabularyWord } from '@/lib/db';
 import { VocabularyImage } from '@/components/VocabularyImage';
 import { VocabularyContextSentences } from '@/components/VocabularyContextSentences';
@@ -62,6 +62,15 @@ export function VocabularyFlashcards() {
     startTransition(async () => {
       const updated = await setWordMainContext(current.id, index);
       setCards((prev) => prev.map((c) => (c.id === current.id ? updated : c)));
+    });
+  };
+
+  const handleRegenerate = () => {
+    if (!current) return;
+    if (!confirm('Regenerate this word’s definition, example sentences, and image? This overwrites the current version.')) return;
+    startTransition(async () => {
+      const updated = await regenerateVocabularyWord(current.id);
+      setCards((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
     });
   };
 
@@ -181,6 +190,15 @@ export function VocabularyFlashcards() {
                     onGenerated={handleImageGenerated}
                   />
                   <VocabularyAssistant key={current.id} wordId={current.id} word={current.word} />
+                  <div className="pt-2">
+                    <button
+                      onClick={handleRegenerate}
+                      disabled={isPending}
+                      className="px-2 py-1 text-xs rounded border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 disabled:opacity-40 transition-colors"
+                    >
+                      Regenerate
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

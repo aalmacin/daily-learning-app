@@ -82,6 +82,17 @@ export function removeWordFromStore(id: number) {
   })
 }
 
+export function updateWordInStore(word: VocabularyWord) {
+  vocabStore.setState((state) => ({
+    ...state,
+    activeWords: state.activeWords.map((w) =>
+      w.status === 'done' && w.id === word.id
+        ? ({ ...w, ...word } as DoneVocabResult)
+        : w,
+    ),
+  }))
+}
+
 export function updateWordImageInStore(id: number, imageUrl: string, imageModel: string) {
   vocabStore.setState((state) => ({
     ...state,
