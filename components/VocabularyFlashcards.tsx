@@ -7,6 +7,7 @@ import { VocabularyImage } from '@/components/VocabularyImage';
 import { VocabularyContextSentences } from '@/components/VocabularyContextSentences';
 import { VocabularyAssistant } from '@/components/VocabularyAssistant';
 import { getFlashcardClue } from '@/lib/vocabulary-clue';
+import { SpeakButton } from '@/components/SpeakButton';
 
 export function VocabularyFlashcards() {
   const [filter, setFilter] = useState<'all' | 'word' | 'idiom'>('all');
@@ -166,11 +167,12 @@ export function VocabularyFlashcards() {
               {/* Back details */}
               {showBack && (
                 <div className="border-t border-zinc-100 dark:border-zinc-800 px-6 sm:px-8 pb-6 space-y-4">
-                  <div className="pt-4 text-center">
+                  <div className="pt-4 flex items-center justify-center gap-1.5">
                     <span className="inline-block px-3 py-1 text-sm font-semibold rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300">
                       {current.word}
                     </span>
-                    <span className="ml-2 text-xs text-zinc-400 dark:text-zinc-500">
+                    <SpeakButton text={current.word} label={`Read "${current.word}" aloud`} />
+                    <span className="text-xs text-zinc-400 dark:text-zinc-500">
                       {current.type}
                     </span>
                   </div>
