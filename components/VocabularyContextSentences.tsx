@@ -1,6 +1,7 @@
 'use client';
 
 import { fillBlank, type ContextSentence } from '@/lib/db';
+import { SpeakButton } from '@/components/SpeakButton';
 
 type Props = {
   context: string;
@@ -40,6 +41,7 @@ export function VocabularyContextSentences({ context, contextSentences, word, on
                 </span>
               )}
             </div>
+            <SpeakButton text={fillBlank(cs.sentence, word)} label="Read sentence aloud" />
             {onSetMain && i !== 0 && (
               <button
                 type="button"

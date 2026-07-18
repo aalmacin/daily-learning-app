@@ -6,6 +6,7 @@ import { SRS_INTERVALS, type VocabularyWord } from '@/lib/db';
 import { VocabularyImage } from '@/components/VocabularyImage';
 import { VocabularyContextSentences } from '@/components/VocabularyContextSentences';
 import { VocabularyAssistant } from '@/components/VocabularyAssistant';
+import { SpeakButton } from '@/components/SpeakButton';
 
 const MONTH_NAMES = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
@@ -69,18 +70,28 @@ export function VocabularyWordRow({ word: w, isExpanded, onToggleExpand, onUpdat
   return (
     <div className="border border-zinc-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-950 overflow-hidden">
       {/* Header */}
-      <button
-        type="button"
-        onClick={onToggleExpand}
-        className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors"
-      >
-        <span className="font-medium text-zinc-900 dark:text-zinc-100">
-          {w.word}
-        </span>
-        <span className="text-zinc-400 dark:text-zinc-500 text-sm">
-          {isExpanded ? '−' : '+'}
-        </span>
-      </button>
+      <div className="w-full flex items-center justify-between px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors">
+        <button
+          type="button"
+          onClick={onToggleExpand}
+          className="flex-1 flex items-center gap-2 text-left min-w-0"
+        >
+          <span className="font-medium text-zinc-900 dark:text-zinc-100 truncate">
+            {w.word}
+          </span>
+        </button>
+        <div className="flex items-center gap-1 shrink-0">
+          <SpeakButton text={w.word} label={`Read "${w.word}" aloud`} />
+          <button
+            type="button"
+            onClick={onToggleExpand}
+            className="p-1 text-zinc-400 dark:text-zinc-500 text-sm"
+            aria-label={isExpanded ? 'Collapse' : 'Expand'}
+          >
+            {isExpanded ? '−' : '+'}
+          </button>
+        </div>
+      </div>
 
       {/* Expanded content */}
       {isExpanded && (
