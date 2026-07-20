@@ -33,6 +33,8 @@ import {
   generateVocabularyImage,
   chatAboutVocabulary,
   evaluateVocabularySentence,
+  findVocabularyWords,
+  type VocabularyCandidate,
 } from '@/lib/openai';
 import { isValidImageModel, DEFAULT_IMAGE_MODEL } from '@/lib/imageModels';
 import { getCurrentUser } from '@/lib/auth';
@@ -221,6 +223,16 @@ export async function submitVocabularySentenceAttemptAction(
     sentence,
   );
   return insertVocabularySentenceAttempt(wordId, sentence, isCorrect, feedback);
+}
+
+export async function findVocabularyCandidates(sentence: string): Promise<VocabularyCandidate[]> {
+  const user = await getCurrentUser();
+  if (!user) throw new Error('Not authenticated');
+
+  const trimmed = sentence.trim();
+  if (!trimmed) throw new Error("Enter a sentence describing the word you're looking for");
+
+  return findVocabularyWords(trimmed);
 }
 
 export async function getVocabularyReviewCards(
