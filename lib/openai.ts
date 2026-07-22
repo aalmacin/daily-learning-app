@@ -410,6 +410,51 @@ export async function evaluateVocabularySentence(
   return { isCorrect: parsed.is_correct, feedback: parsed.feedback };
 }
 
+export type VocabularyCandidate = {
+  word: string;
+  type: 'word' | 'idiom';
+  example: string;
+};
+
+const WORD_FINDER_SYSTEM_PROMPT = `You help a language learner find the word or idiom they're trying to think of. Given a sentence or description of a meaning or situation, suggest up to 3 English words or idioms that best fit. Respond with a JSON object with exactly this shape:
+
+{ "candidates": [{ "word": string, "type": "word" | "idiom", "example": string }] }
+
+Each "example" is a natural sentence using that candidate in a context similar to what the learner described. If nothing fits well, return an empty "candidates" array. Respond ONLY with valid JSON, no markdown or extra text.`;
+
+export async function findVocabularyWords(sentence: string): Promise<VocabularyCandidate[]> {
+  const response = await client.chat.completions.create({
+    model: 'gpt-5.4-mini',
+    messages: [
+      { role: 'system', content: WORD_FINDER_SYSTEM_PROMPT },
+      { role: 'user', content: sentence },
+    ],
+    response_format: { type: 'json_object' },
+  });
+
+  const raw = response.choices[0]?.message?.content;
+  if (!raw) throw new Error('Empty response from OpenAI');
+
+  const parsed = JSON.parse(raw) as Partial<{ candidates: unknown }>;
+  if (!Array.isArray(parsed.candidates)) {
+    throw new Error('Invalid response shape from OpenAI');
+  }
+
+  return parsed.candidates.slice(0, 3).map((c): VocabularyCandidate => {
+    const candidate = c as Partial<{ word: unknown; type: unknown; example: unknown }>;
+    if (
+      typeof candidate.word !== 'string' ||
+      candidate.word.trim().length === 0 ||
+      (candidate.type !== 'word' && candidate.type !== 'idiom') ||
+      typeof candidate.example !== 'string' ||
+      candidate.example.trim().length === 0
+    ) {
+      throw new Error('Invalid candidate shape from OpenAI');
+    }
+    return { word: candidate.word, type: candidate.type, example: candidate.example };
+  });
+}
+
 export async function buildImagePrompt(
   word: string,
   context: string,
